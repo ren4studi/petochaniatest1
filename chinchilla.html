@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Золотая Шиншилла | Petochania</title>
+    <link rel="shortcut icon" href="img/free-icon-kitten-5389298.png">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Lato', 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+        .main {
+            flex: 1;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #e0e0e0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        /* Логотип и название слева */
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            text-decoration: none;
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 0.5px;
+        }
+        
+        .logo-main {
+            font-size: 20px;
+            font-weight: 700;
+            color: #C8A97E;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .logo-subtitle {
+            font-size: 12px;
+            color: #666;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Центральное меню */
+        .nav-center {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: color 0.3s;
+            position: relative;
+        }
+        
+        .nav-links a:hover {
+            color: #C8A97E;
+        }
+        
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #C8A97E;
+            transition: width 0.3s;
+        }
+        
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+        
+        /* Правая часть с телефоном */
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .phone-number {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        
+        .phone-number:hover {
+            color: #C8A97E;
+        }
+        
+        /* Hero Section */
+        .breed-hero {
+            padding: 140px 20px 60px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            text-align: center;
+        }
+        
+        .breed-hero h1 {
+            font-size: clamp(36px, 6vw, 48px);
+            color: #333;
+            margin-bottom: 20px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .breed-hero p {
+            font-size: clamp(16px, 3vw, 20px);
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        /* Breed Content */
+        .breed-content {
+            padding: 60px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .breed-overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            margin-bottom: 60px;
+            align-items: center;
+        }
+        
+        .breed-image {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .breed-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .breed-info {
+            padding: 30px;
+        }
+        
+        .breed-info h2 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 20px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .breed-description {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .breed-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-item h4 {
+            color: #C8A97E;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-item p {
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .characteristics {
+            margin: 30px 0;
+        }
+        
+        .characteristics h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 15px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .tag {
+            background: #C8A97E;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* Available Cats Section */
+        .available-cats {
+            margin: 60px 0;
+        }
+        
+        .available-cats h2 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 40px;
+            font-family: 'Playfair Display', serif;
+            text-align: center;
+        }
+        
+        .cats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+        
+        .cat-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .cat-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .cat-image {
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 1/1;
+        }
+        
+        .cat-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        
+        .cat-card:hover .cat-image img {
+            transform: scale(1.05);
+        }
+        
+        .cat-status {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .cat-status.available {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .cat-status.reserved {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .cat-status.sold {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .cat-details {
+            padding: 25px;
+        }
+        
+        .cat-details h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 15px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .cat-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .info-label {
+            font-size: 12px;
+            color: #C8A97E;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        
+        .info-value {
+            font-size: 14px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            width: 100%;
+            padding: 12px 20px;
+            background: #C8A97E;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            text-align: center;
+            transition: background-color 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .cta-button:hover {
+            background: #694e28;
+        }
+        
+        /* Footer */
+        footer {
+            background: #444;
+            color: #fff;
+            padding: 40px 20px;
+            margin-top: 40px;
+        }
+        
+        footer .wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        footer .logo {
+            text-align: center;
+            font-size: 24px;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .footer-left {
+            text-align: center;
+        }
+        
+        .footer-right {
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .footer-links a {
+            color: #777;
+            text-decoration: none;
+        }
+        
+        .footer-links a:hover {
+            color: #C8A97E;
+        }
+        
+        .social {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #363636;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            font-size: 14px;
+        }
+        
+        .social:hover {
+            background: #C8A97E;
+        }
+        
+        /* Мобильное меню */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #333;
+            cursor: pointer;
+            padding: 5px;
+            z-index: 1002;
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #666;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .modal-close:hover {
+            color: #C8A97E;
+        }
+        
+        .modal-icon {
+            font-size: 48px;
+            color: #C8A97E;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .modal-text {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .modal-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: #C8A97E;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .modal-button:hover {
+            background: #694e28;
+        }
+        
+        .modal-button.whatsapp {
+            background: #25D366;
+        }
+        
+        .modal-button.whatsapp:hover {
+            background: #1da851;
+        }
+        
+        .modal-button.phone {
+            background: #333;
+        }
+        
+        .modal-button.phone:hover {
+            background: #555;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 1024px) {
+            .breed-overview {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+            
+            .nav-center, .nav-right {
+                display: none;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+            
+            .mobile-menu {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100vh;
+                background: rgba(255, 255, 255, 0.98);
+                z-index: 1001;
+                padding: 80px 20px 20px;
+                overflow-y: auto;
+            }
+            
+            .mobile-menu.active {
+                display: block;
+            }
+            
+            .mobile-menu-content {
+                display: flex;
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .mobile-menu a {
+                padding: 16px 20px;
+                border-bottom: 1px solid #f0f0f0;
+                font-size: 18px;
+                color: #333;
+                text-decoration: none;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                transition: all 0.3s;
+            }
+            
+            .mobile-menu a:hover {
+                color: #C8A97E;
+                background: #f9f9f9;
+            }
+            
+            .mobile-menu a:last-child {
+                border-bottom: none;
+            }
+            
+            .mobile-phone {
+                display: block;
+                padding: 16px 20px;
+                border-top: 2px solid #C8A97E;
+                margin-top: 20px;
+                font-weight: 600;
+                background: #f8f9fa;
+            }
+            
+            .close-menu {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: none;
+                border: none;
+                font-size: 24px;
+                color: #333;
+                cursor: pointer;
+                z-index: 1003;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .breed-content {
+                padding: 40px 15px;
+            }
+            
+            .cats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .breed-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .cat-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .breed-hero {
+                padding: 120px 15px 40px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .breed-info {
+                padding: 20px;
+            }
+            
+            .breed-info h2 {
+                font-size: 28px;
+            }
+            
+            .available-cats h2 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <!-- Левая часть с логотипом -->
+                <div class="logo-section">
+                    <a href="index.html" class="logo">
+                        <div class="logo-main">Petochania</div>
+                        <div class="logo-subtitle">Питомник элитных кошек</div>
+                    </a>
+                </div>
+                
+                <!-- Центральное меню -->
+                <div class="nav-center">
+                    <div class="nav-links">
+                        <a href="index.html#about">О питомнике</a>
+                        <a href="index.html#testimonials">Отзывы</a>
+                        <a href="index.html#contact">Контакты</a>
+                        <a href="index.html#faq-main">Частые вопросы</a>
+                    </div>
+                </div>
+                
+                <!-- Правая часть с телефоном -->
+                <div class="nav-right">
+                    <a href="tel:+79261502870" class="phone-number">8 926 150 2870</a>
+                </div>
+                
+                <!-- Кнопка мобильного меню -->
+                <button class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Мобильное меню -->
+    <div class="mobile-menu">
+        <button class="close-menu">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="mobile-menu-content">
+            <a href="index.html#about">О питомнике</a>
+            <a href="index.html#testimonials">Отзывы</a>
+            <a href="index.html#contact">Контакты</a>
+            <a href="gallery.html">Наши кошки</a>
+            <a href="faq.html">Частые вопросы</a>
+            <a href="tel:+79261502870" class="mobile-phone">8 926 150 2870</a>
+        </div>
+    </div>
+
+    <main class="main">
+        <section class="breed-hero">
+            <div class="container">
+                <h1 id="breedTitle">Золотая Шиншилла</h1>
+                <p id="breedHeroDescription">Аристократичные британцы с роскошной золотистой шерстью и королевским характером</p>
+            </div>
+        </section>
+
+        <section class="breed-content">
+            <div class="breed-overview">
+                <div class="breed-image">
+                    <img src="img/goldshinshina.JPG" alt="Золотая Шиншилла" id="breedMainImage">
+                </div>
+                <div class="breed-info">
+                    <h2 id="breedInfoTitle">О породе Золотая Шиншилла</h2>
+                    <p class="breed-description" id="breedDescription">
+                        Золотые шиншиллы — одна из самых красивых и редких пород кошек. Их шерсть имеет уникальный золотистый оттенок с затемнениями на кончиках, создавая эффект сияния. Эти аристократичные кошки обладают спокойным и уравновешенным характером, идеально подходят для жизни в семье.
+                    </p>
+                    
+                    <div class="breed-stats">
+                        <div class="stat-item">
+                            <h4>Происхождение</h4>
+                            <p id="breedOrigin">Великобритания</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>Вес</h4>
+                            <p id="breedWeight">4-6 кг</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>Продолжительность жизни</h4>
+                            <p id="breedLifespan">12-15 лет</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>Темперамент</h4>
+                            <p id="breedTemperament">Спокойный, нежный</p>
+                        </div>
+                    </div>
+                    
+                    <div class="characteristics">
+                        <h3>Особенности характера</h3>
+                        <p>Золотые шиншиллы обладают спокойным и уравновешенным характером. Они очень привязываются к хозяевам, но при этом сохраняют независимость.</p>
+                        
+                        <div class="tags" id="breedCharacteristics">
+                            <span class="tag">Любопытный</span>
+                            <span class="tag">Дружелюбный</span>
+                            <span class="tag">Элегантный</span>
+                            <span class="tag">Спокойный</span>
+                            <span class="tag">Независимый</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="available-cats">
+                <h2>Доступные котята</h2>
+                <div class="cats-grid" id="catsGrid">
+                    <!-- Котята будут загружены динамически -->
+                    <div class="loading-message" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #C8A97E; margin-bottom: 20px;"></i>
+                        <h3>Загрузка котят...</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="wrapper">
+            <div class="footer-left">
+                <a href="index.html" class="logo">Petochania</a>
+                <div class="footer-links">
+                    <a href="index.html#about">О питомнике</a>
+                    <a href="index.html#testimonials">Отзывы</a>
+                    <a href="index.html#contact">Контакты</a>
+                    <a href="gallery.html">Наши кошки</a>
+                    <a href="faq.html">Частые вопросы</a>
+                </div>
+            </div>
+            <div class="footer-right">
+                <a href="https://t.me/tata_procats" class="social"><i class="fab fa-telegram"></i> Telegram</a>
+                <a href="https://wa.me/message/Y4ZYRHELPNHUE1" class="social"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+                <a href="https://vk.com/petochania" class="social"><i class="fab fa-vk"></i> VK</a>
+                <a href="https://www.facebook.com/share/1A33qj8Nbm/?mibextid=wwXIfr" class="social"><i class="fab fa-facebook"></i> Facebook</a>
+                <a href="https://www.tiktok.com/@tata.vygodnaya?_t=ZS-90PLbDoj2kE&_r=1" class="social"><i class="fab fa-tiktok"></i> Tik-Tok</a>
+                <a href="https://www.instagram.com/petochania?igsh=MWR3bHhpNjhnd3g3dw%3D%3D&utm_source=qr" class="social"><i class="fab fa-instagram"></i> Instagram</a>
+            </div>
+        </div>
+    </footer>
+
+    <div class="modal-overlay" id="bookingModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeModal">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="modal-icon">
+                <i class="fas fa-cat"></i>
+            </div>
+            
+            <h2 class="modal-title">Обратитесь к нам</h2>
+            
+            <p class="modal-text">
+                По вопросам или бронирования котёнка свяжитесь с нами удобным для вас способом. 
+                Мы ответим на все ваши вопросы и поможем с выбором питомца.
+            </p>
+            
+            <div class="modal-buttons">
+                <a href="https://wa.me/message/Y4ZYRHELPNHUE1" class="modal-button whatsapp">
+                    <i class="fab fa-whatsapp"></i>
+                    Написать в WhatsApp
+                </a>
+                
+                <a href="tel:+79261502870" class="modal-button phone">
+                    <i class="fas fa-phone"></i>
+                    Позвонить по телефону
+                </a>
+                
+                <a href="https://web.telegram.org/a/?account=2#930887749" class="modal-button">
+                    <i class="fab fa-telegram"></i>
+                    Написать в Telegram
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем скрипт синхронизации -->
+    <!-- В <head> или перед закрывающим </body> -->
+<script src="data-sync.js"></script>
+
+<script>
+    // Глобальная переменная для DataSync
+    let dataSync;
+    
+    // Мобильное меню
+    document.addEventListener('DOMContentLoaded', async function() {
+        const menuToggle = document.querySelector('.menu-toggle');
+        const closeMenu = document.querySelector('.close-menu');
+        const mobileMenu = document.querySelector('.mobile-menu');
+        
+        menuToggle.addEventListener('click', function() {
+            mobileMenu.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        
+        closeMenu.addEventListener('click', function() {
+            mobileMenu.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+        
+        const mobileLinks = document.querySelectorAll('.mobile-menu a');
+        mobileLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                mobileMenu.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+        });
+        
+        // Модальное окно
+        const bookingModal = document.getElementById('bookingModal');
+        const closeModal = document.getElementById('closeModal');
+        
+        // Инициализируем DataSync
+        if (typeof DataSync !== 'undefined' && window.dataSync) {
+            dataSync = window.dataSync;
+            console.log('DataSync инициализирован из глобальной переменной');
+        } else if (typeof DataSync !== 'undefined') {
+            dataSync = new DataSync();
+            console.log('DataSync создан как новый экземпляр');
+        } else {
+            console.error('DataSync не загружен');
+            // Пробуем загрузить синхронно
+            const script = document.createElement('script');
+            script.src = 'data-sync.js';
+            script.onload = function() {
+                dataSync = window.dataSync || new DataSync();
+                console.log('DataSync загружен динамически');
+                loadBreedPageData();
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Слушаем события обновления данных
+        if (dataSync) {
+            window.addEventListener('dataSyncUpdate', (event) => {
+                console.log('Получено событие обновления данных от:', event.detail.source);
+                loadBreedPageData();
+            });
+        }
+        
+        // Загрузка данных для страницы породы
+        await loadBreedPageData();
+        
+        closeModal.addEventListener('click', function() {
+            bookingModal.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+        
+        bookingModal.addEventListener('click', function(e) {
+            if (e.target === bookingModal) {
+                bookingModal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && bookingModal.classList.contains('active')) {
+                bookingModal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+        
+        // Периодическая проверка обновлений
+        if (dataSync) {
+            setInterval(() => {
+                console.log('Периодическая проверка обновлений...');
+                loadBreedPageData();
+            }, 30000); // Каждые 30 секунд
+        }
+    });
+
+    // Функция для загрузки данных страницы породы
+    async function loadBreedPageData() {
+        try {
+            if (!dataSync) {
+                console.error('DataSync не инициализирован');
+                return;
+            }
+            
+            console.log('Загрузка данных страницы породы...');
+            
+            // Получаем ID породы из URL
+            const pathParts = window.location.pathname.split('/');
+            const breedId = pathParts[pathParts.length - 1].replace('.html', '');
+            
+            // Загружаем данные породы
+            const breedData = dataSync.getBreedData(breedId);
+            console.log('Данные породы загружены:', breedData);
+            
+            if (breedData) {
+                updateBreedPage(breedData);
+            } else {
+                // Используем данные по умолчанию
+                const defaultData = getDefaultBreedData(breedId);
+                updateBreedPage(defaultData);
+            }
+            
+            // Загружаем кошек для этой породы
+            const breedName = breedData?.title || getDefaultBreedData(breedId).title;
+            const breedCats = dataSync.getBreedCats(breedName);
+            console.log('Котята загружены:', breedCats);
+            
+            updateBreedCats(breedCats || []);
+            
+        } catch (error) {
+            console.error('Error loading breed page data:', error);
+            // Используем данные по умолчанию в случае ошибки
+            const pathParts = window.location.pathname.split('/');
+            const breedId = pathParts[pathParts.length - 1].replace('.html', '');
+            const defaultData = getDefaultBreedData(breedId);
+            updateBreedPage(defaultData);
+            updateBreedCats([]);
+        }
+    }
+
+    // Функция обновления данных породы на странице
+    function updateBreedPage(breedData) {
+        if (!breedData) return;
+        
+        console.log('Обновление страницы породы данными:', breedData);
+        
+        // Обновляем заголовок
+        const breedTitle = document.getElementById('breedTitle');
+        if (breedTitle && breedData.title) {
+            breedTitle.textContent = breedData.title;
+        }
+        
+        // Обновляем описание в герой-секции
+        const heroDescription = document.getElementById('breedHeroDescription');
+        if (heroDescription && breedData.heroDescription) {
+            heroDescription.textContent = breedData.heroDescription;
+        }
+        
+        // Обновляем заголовок раздела
+        const breedInfoTitle = document.getElementById('breedInfoTitle');
+        if (breedInfoTitle && breedData.title) {
+            breedInfoTitle.textContent = `О породе ${breedData.title}`;
+        }
+        
+        // Обновляем основное описание
+        const breedDescription = document.getElementById('breedDescription');
+        if (breedDescription && breedData.description) {
+            breedDescription.textContent = breedData.description;
+        }
+        
+        // Обновляем характеристики
+        if (breedData.characteristics) {
+            const characteristicsContainer = document.getElementById('breedCharacteristics');
+            if (characteristicsContainer) {
+                characteristicsContainer.innerHTML = '';
+                if (Array.isArray(breedData.characteristics)) {
+                    breedData.characteristics.forEach(char => {
+                        const tag = document.createElement('span');
+                        tag.className = 'tag';
+                        tag.textContent = char;
+                        characteristicsContainer.appendChild(tag);
+                    });
+                }
+            }
+        }
+        
+        // Обновляем статистику
+        if (breedData.origin) {
+            const originElement = document.getElementById('breedOrigin');
+            if (originElement) originElement.textContent = breedData.origin;
+        }
+        
+        if (breedData.weight) {
+            const weightElement = document.getElementById('breedWeight');
+            if (weightElement) weightElement.textContent = breedData.weight;
+        }
+        
+        if (breedData.lifespan) {
+            const lifespanElement = document.getElementById('breedLifespan');
+            if (lifespanElement) lifespanElement.textContent = breedData.lifespan;
+        }
+        
+        if (breedData.temperament) {
+            const temperamentElement = document.getElementById('breedTemperament');
+            if (temperamentElement) temperamentElement.textContent = breedData.temperament;
+        }
+        
+        // Обновляем главное изображение если есть
+        if (breedData.mainImage) {
+            const mainImage = document.getElementById('breedMainImage');
+            if (mainImage) {
+                // Проверяем, это base64 или обычный URL
+                if (breedData.mainImage.startsWith('data:image/')) {
+                    mainImage.src = breedData.mainImage;
+                } else {
+                    mainImage.src = breedData.mainImage;
+                }
+                mainImage.alt = breedData.title;
+            }
+        }
+    }
+
+    // Добавьте эту функцию в chinchilla.html в раздел <script>
+function setupRealTimeUpdates() {
+    // Слушаем события обновления из админ-панели
+    window.addEventListener('storage', function(event) {
+        if (event.key === 'cats_updated' || event.key === 'petochania_cats') {
+            console.log('Данные кошек обновились, перезагружаем...');
+            loadBreedPageData();
+        }
+    });
+    
+    // Также слушаем custom events
+    window.addEventListener('dataSyncUpdate', function(event) {
+        console.log('Получено событие обновления данных:', event.detail);
+        loadBreedPageData();
+    });
+    
+    // Периодическая проверка обновлений
+    setInterval(() => {
+        const lastUpdate = localStorage.getItem('cats_updated');
+        if (lastUpdate) {
+            const lastUpdateTime = parseInt(lastUpdate);
+            const currentTime = Date.now();
+            
+            // Если обновление было менее 30 секунд назад, перезагружаем
+            if (currentTime - lastUpdateTime < 30000) {
+                console.log('Обнаружены свежие данные, перезагружаем...');
+                loadBreedPageData();
+            }
+        }
+    }, 5000); // Проверяем каждые 5 секунд
+}
+
+// Вызовите эту функцию в DOMContentLoaded:
+document.addEventListener('DOMContentLoaded', async function() {
+    // ... существующий код ...
+    
+    // Добавьте эту строку:
+    setupRealTimeUpdates();
+    
+    // ... остальной код ...
+});
+
+    // Функция обновления списка котят
+    function updateBreedCats(cats) {
+        console.log('Обновление списка котят:', cats);
+        
+        const catsGrid = document.getElementById('catsGrid');
+        if (!catsGrid) return;
+        
+        catsGrid.innerHTML = '';
+        
+        if (!cats || cats.length === 0) {
+            catsGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #7f8c8d;">
+                    <i class="fas fa-cat" style="font-size: 48px; margin-bottom: 20px; display: block;"></i>
+                    <h3>В настоящее время нет доступных котят</h3>
+                    <p>Свяжитесь с нами для уточнения информации о будущих пометах</p>
+                    <a href="https://wa.me/message/Y4ZYRHELPNHUE1" class="cta-button" style="margin-top: 20px; display: inline-block; width: auto;">
+                        <i class="fab fa-whatsapp"></i> Узнать о будущих пометах
+                    </a>
+                </div>
+            `;
+            return;
+        }
+        
+        cats.forEach(cat => {
+            const statusText = getCatStatusText(cat.status);
+            const statusClass = getCatStatusClass(cat.status);
+            
+            const catCard = document.createElement('div');
+            catCard.className = 'cat-card';
+            catCard.innerHTML = `
+                <div class="cat-image">
+                    ${cat.images && cat.images.length > 0 ? 
+                        `<img src="${cat.images[0]}" alt="${cat.name}" loading="lazy">` :
+                        `<div style="width: 100%; height: 100%; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-cat" style="font-size: 48px; color: #C8A97E;"></i>
+                        </div>`
+                    }
+                    <div class="cat-status ${statusClass}">${statusText}</div>
+                </div>
+                <div class="cat-details">
+                    <h3>${cat.name}</h3>
+                    <div class="cat-info">
+                        <div class="info-item">
+                            <span class="info-label">Пол</span>
+                            <span class="info-value">${cat.gender}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Окрас</span>
+                            <span class="info-value">${cat.color}</span>
+                        </div>
+                        ${cat.age ? `
+                        <div class="info-item">
+                            <span class="info-label">Возраст</span>
+                            <span class="info-value">${cat.age} месяцев</span>
+                        </div>` : ''}
+                        ${cat.litter ? `
+                        <div class="info-item">
+                            <span class="info-label">Помет</span>
+                            <span class="info-value">${cat.litter}</span>
+                        </div>` : ''}
+                    </div>
+                    ${cat.description ? `<p style="margin: 15px 0; color: #666; font-size: 14px; line-height: 1.4;">${cat.description}</p>` : ''}
+                    ${cat.price ? `<div style="margin: 15px 0; text-align: center;">
+                        <span style="font-size: 18px; font-weight: bold; color: #C8A97E;">${cat.price} руб.</span>
+                    </div>` : ''}
+                    <button class="cta-button" onclick="showBookingModal('${cat.name}')">
+                        ${cat.status === 'ДОСТУПЕН' ? 'Забронировать котёнка' : 'Узнать подробности'}
+                    </button>
+                </div>
+            `;
+            
+            catsGrid.appendChild(catCard);
+        });
+    }
+
+    function getCatStatusText(status) {
+        const statusMap = {
+            'ДОСТУПЕН': 'ДОСТУПЕН',
+            'ЗАБРОНИРОВАН': 'ЗАБРОНИРОВАН',
+            'ПРОДАН': 'ПРОДАН'
+        };
+        return statusMap[status] || status;
+    }
+
+    function getCatStatusClass(status) {
+        const classMap = {
+            'ДОСТУПЕН': 'available',
+            'ЗАБРОНИРОВАН': 'reserved', 
+            'ПРОДАН': 'sold'
+        };
+        return classMap[status] || '';
+    }
+
+    function showBookingModal(catName) {
+        const modal = document.getElementById('bookingModal');
+        if (modal) {
+            const modalTitle = modal.querySelector('.modal-title');
+            if (modalTitle && catName) {
+                modalTitle.textContent = `Забронировать котёнка ${catName}`;
+            }
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    // Получение данных по умолчанию для породы
+    function getDefaultBreedData(breedId) {
+        const defaults = {
+            'chinchilla': {
+                title: 'Золотая Шиншилла',
+                heroDescription: 'Аристократичные британцы с роскошной золотистой шерстью и королевским характером',
+                description: 'Золотые шиншиллы — одна из самых красивых и редких пород кошек. Их шерсть имеет уникальный золотистый оттенок с затемнениями на кончиках, создавая эффект сияния. Эти аристократичные кошки обладают спокойным и уравновешенным характером, идеально подходят для жизни в семье.',
+                origin: 'Великобритания',
+                weight: '4-6 кг',
+                lifespan: '12-15 лет',
+                temperament: 'Спокойный, нежный',
+                characteristics: ['Любопытный', 'Дружелюбный', 'Элегантный', 'Спокойный', 'Независимый'],
+                mainImage: 'img/goldshinshina.JPG'
+            },
+            'devon': {
+                title: 'Девон-рекс',
+                heroDescription: 'Энергичные и любвеобильные кошки с инопланетной внешностью и собачьим характером',
+                description: 'Девон-рекс — порода домашних кошек, появившаяся в Великобритании в 1960-х годах. Эти кошки отличаются уникальной волнистой шерстью, большими ушами и выразительными глазами. Девон-рексы очень социальные и преданные кошки, которые любят быть в центре внимания.',
+                origin: 'Великобритания',
+                weight: '3-4.5 кг',
+                lifespan: '9-15 лет',
+                temperament: 'Активный, игривый',
+                characteristics: ['Ласковый', 'Игривый', 'Умный', 'Общительный', 'Энергичный'],
+                mainImage: 'img/devon-reks.JPG'
+            },
+            'munchkin': {
+                title: 'Манчкин',
+                heroDescription: 'Очаровательные коротколапые кошки с уникальной внешностью и дружелюбным нравом',
+                description: 'Манчкины — уникальная порода кошек с короткими лапки, появившаяся в результате естественной генетической мутации. Несмотря на короткие конечности, эти кошки очень подвижны и активны. Манчкины известны своим дружелюбным и общительным характером.',
+                origin: 'США',
+                weight: '3-4 кг',
+                lifespan: '12-15 лет',
+                temperament: 'Дружелюбный, любопытный',
+                characteristics: ['Величественная', 'Умная', 'Любопытная', 'Дружелюбная', 'Общительная'],
+                mainImage: 'img/machkin.JPG'
+            }
+        };
+        
+        return defaults[breedId] || {};
+    }
+</script>
+</body>
+</html>
