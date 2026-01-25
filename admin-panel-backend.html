@@ -17,6 +17,7 @@
     <!-- Backend Services -->
     <script src="firebase-config.js"></script>
     <script src="firebase-backend.js"></script>
+    <script src="github-sync-backend.js"></script>
     
     <style>
         * {
@@ -1329,6 +1330,7 @@
             <div class="tab active" data-subtab="site-settings">Основные настройки</div>
             <div class="tab" data-subtab="social-settings">Социальные сети</div>
             <div class="tab" data-subtab="seo-settings">SEO</div>
+            <div class="tab" data-subtab="sync-settings">Синхронизация данных</div>
         </div>
         
         <!-- Site Settings -->
@@ -1446,6 +1448,59 @@
                 </div>
             </form>
         </div>
+        
+        <!-- Sync Settings -->
+        <div id="sync-settings" class="tab-content">
+            <div class="alert alert-info" style="margin-bottom: 20px;">
+                <i class="fas fa-info-circle"></i>
+                <strong>Синхронизация данных между устройствами</strong><br>
+                Для синхронизации данных между устройствами настройте GitHub Personal Access Token.
+                Данные будут храниться в приватном GitHub Gist и автоматически синхронизироваться.
+            </div>
+            
+            <form id="syncSettingsForm">
+                <div class="form-group">
+                    <label for="githubToken">GitHub Personal Access Token</label>
+                    <input type="password" id="githubToken" class="form-control" 
+                           placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" 
+                           value="">
+                    <small class="text-muted">
+                        Создайте токен на <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings → Developer settings → Personal access tokens</a><br>
+                        Требуемые права: <code>gist</code> (для создания и обновления Gist)
+                    </small>
+                </div>
+                
+                <div class="form-group" id="gistIdGroup" style="display: none;">
+                    <label for="gistId">Gist ID (опционально)</label>
+                    <input type="text" id="gistId" class="form-control" 
+                           placeholder="Оставьте пустым для создания нового Gist">
+                    <small class="text-muted">Если у вас уже есть Gist с данными, укажите его ID</small>
+                </div>
+                
+                <div class="form-group">
+                    <div id="syncStatus" class="alert" style="display: none;"></div>
+                </div>
+                
+                <div class="form-row">
+                    <button type="submit" class="btn btn-primary">
+                        <span id="syncSubmitText">Сохранить настройки синхронизации</span>
+                        <div id="syncSubmitLoading" class="loading" style="display: none; margin-left: 10px;"></div>
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="testSyncConnection()">
+                        <i class="fas fa-sync"></i> Проверить соединение
+                    </button>
+                </div>
+            </form>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+                <h4>Текущий статус синхронизации</h4>
+                <div id="currentSyncStatus">
+                    <p><strong>Бекенд:</strong> <span id="backendType">Определяется...</span></p>
+                    <p><strong>Gist ID:</strong> <span id="currentGistId">Не настроен</span></p>
+                    <p><strong>Последняя синхронизация:</strong> <span id="lastSyncTime">-</span></p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1471,59 +1526,76 @@
                         return;
                     }
                 } catch (error) {
-                    console.warn('Локальный сервер недоступен, переключаемся на Firebase/localStorage');
+                    console.warn('Локальный сервер недоступен, переключаемся на облачный бекенд');
                 }
             }
 
-            // Используем Firebase Backend для GitHub Pages
+            // Приоритет 1: GitHub Sync Backend (для синхронизации между устройствами)
+            if (window.githubSyncBackend && window.githubSyncBackend.initialized) {
+                backend = window.githubSyncBackend;
+                console.log('✅ Используется GitHub Sync Backend');
+                return;
+            }
+
+            // Приоритет 2: Firebase Backend (если настроен)
             if (window.firebaseBackend) {
                 backend = window.firebaseBackend;
                 await backend.init();
-                console.log('✅ Используется Firebase Backend');
-            } else {
-                // Fallback: создаем простой backend на localStorage
-                console.warn('Firebase Backend не найден, используется localStorage fallback');
-                backend = {
-                    getCats: async () => JSON.parse(localStorage.getItem('petochania_cats') || '[]'),
-                    createCat: async (data) => {
-                        const cats = JSON.parse(localStorage.getItem('petochania_cats') || '[]');
-                        const cat = { ...data, id: 'cat_' + Date.now() };
-                        cats.push(cat);
-                        localStorage.setItem('petochania_cats', JSON.stringify(cats));
-                        return { success: true, data: cat };
-                    },
-                    updateCat: async (id, data) => {
-                        const cats = JSON.parse(localStorage.getItem('petochania_cats') || '[]');
-                        const index = cats.findIndex(c => c.id === id);
-                        if (index !== -1) {
-                            cats[index] = { ...cats[index], ...data };
-                            localStorage.setItem('petochania_cats', JSON.stringify(cats));
-                        }
-                        return { success: true, data };
-                    },
-                    deleteCat: async (id) => {
-                        const cats = JSON.parse(localStorage.getItem('petochania_cats') || '[]');
-                        const filtered = cats.filter(c => c.id !== id);
-                        localStorage.setItem('petochania_cats', JSON.stringify(filtered));
-                        return { success: true };
-                    },
-                    getBreedPages: async () => JSON.parse(localStorage.getItem('breedPages') || '{}'),
-                    updateBreedPage: async (id, data) => {
-                        const pages = JSON.parse(localStorage.getItem('breedPages') || '{}');
-                        pages[id] = data;
-                        localStorage.setItem('breedPages', JSON.stringify(pages));
-                        return { success: true, data };
-                    },
-                    login: async (username, password) => {
-                        if (username === 'admin' && password === 'admin123') {
-                            const token = 'token_' + Date.now();
-                            localStorage.setItem('petochania_authToken', token);
-                            return { success: true, token, user: { username, role: 'admin' } };
-                        }
-                        throw new Error('Неверный логин или пароль');
-                    }
-                };
+                if (backend.useFirebase) {
+                    console.log('✅ Используется Firebase Backend');
+                    return;
+                }
             }
+
+            // Fallback: GitHub Sync Backend (даже без токена, будет работать локально)
+            if (window.githubSyncBackend) {
+                backend = window.githubSyncBackend;
+                console.log('⚠️ Используется GitHub Sync Backend (только локально, настройте токен для синхронизации)');
+                return;
+            }
+
+            // Последний fallback: простой localStorage
+            console.warn('⚠️ Используется localStorage fallback (данные не синхронизируются между устройствами)');
+            backend = {
+                getCats: async () => JSON.parse(localStorage.getItem('petochania_cats') || '[]'),
+                createCat: async (data) => {
+                    const cats = JSON.parse(localStorage.getItem('petochania_cats') || '[]');
+                    const cat = { ...data, id: 'cat_' + Date.now() };
+                    cats.push(cat);
+                    localStorage.setItem('petochania_cats', JSON.stringify(cats));
+                    return { success: true, data: cat };
+                },
+                updateCat: async (id, data) => {
+                    const cats = JSON.parse(localStorage.getItem('petochania_cats') || '[]');
+                    const index = cats.findIndex(c => c.id === id);
+                    if (index !== -1) {
+                        cats[index] = { ...cats[index], ...data };
+                        localStorage.setItem('petochania_cats', JSON.stringify(cats));
+                    }
+                    return { success: true, data };
+                },
+                deleteCat: async (id) => {
+                    const cats = JSON.parse(localStorage.getItem('petochania_cats') || '[]');
+                    const filtered = cats.filter(c => c.id !== id);
+                    localStorage.setItem('petochania_cats', JSON.stringify(filtered));
+                    return { success: true };
+                },
+                getBreedPages: async () => JSON.parse(localStorage.getItem('breedPages') || '{}'),
+                updateBreedPage: async (id, data) => {
+                    const pages = JSON.parse(localStorage.getItem('breedPages') || '{}');
+                    pages[id] = data;
+                    localStorage.setItem('breedPages', JSON.stringify(pages));
+                    return { success: true, data };
+                },
+                login: async (username, password) => {
+                    if (username === 'admin' && password === 'admin123') {
+                        const token = 'token_' + Date.now();
+                        localStorage.setItem('petochania_authToken', token);
+                        return { success: true, token, user: { username, role: 'admin' } };
+                    }
+                    throw new Error('Неверный логин или пароль');
+                }
+            };
         }
 
         // API Service для работы с бекендом (совместимость с существующим кодом)
@@ -1548,8 +1620,11 @@
                     }
                 }
                 try {
-                    const cats = await backend.getCats();
-                    return cats || [];
+                    if (backend && typeof backend.getCats === 'function') {
+                        const cats = await backend.getCats();
+                        return cats || [];
+                    }
+                    return [];
                 } catch (error) {
                     console.error('Error getting cats:', error);
                     return [];
@@ -1586,8 +1661,15 @@
                     }
                 }
                 try {
-                    const result = await backend.createCat(catData);
-                    return result;
+                    if (backend && typeof backend.createCat === 'function') {
+                        const result = await backend.createCat(catData);
+                        // Обновляем время последней синхронизации
+                        if (result.success) {
+                            localStorage.setItem('petochania_last_sync', new Date().toISOString());
+                        }
+                        return result;
+                    }
+                    return { success: false, error: 'Backend не поддерживает создание кошек' };
                 } catch (error) {
                     console.error('Error creating cat:', error);
                     return { success: false, error: error.message };
@@ -1614,8 +1696,14 @@
                     }
                 }
                 try {
-                    const result = await backend.updateCat(id, catData);
-                    return result;
+                    if (backend && typeof backend.updateCat === 'function') {
+                        const result = await backend.updateCat(id, catData);
+                        if (result.success) {
+                            localStorage.setItem('petochania_last_sync', new Date().toISOString());
+                        }
+                        return result;
+                    }
+                    return { success: false, error: 'Backend не поддерживает обновление кошек' };
                 } catch (error) {
                     console.error('Error updating cat:', error);
                     return { success: false, error: error.message };
@@ -1640,8 +1728,14 @@
                     }
                 }
                 try {
-                    const result = await backend.deleteCat(id);
-                    return result;
+                    if (backend && typeof backend.deleteCat === 'function') {
+                        const result = await backend.deleteCat(id);
+                        if (result.success) {
+                            localStorage.setItem('petochania_last_sync', new Date().toISOString());
+                        }
+                        return result;
+                    }
+                    return { success: false, error: 'Backend не поддерживает удаление кошек' };
                 } catch (error) {
                     console.error('Error deleting cat:', error);
                     return { success: false, error: error.message };
@@ -5087,6 +5181,146 @@ function initSettingsManagement() {
         e.preventDefault();
         await saveSeoSettings();
     });
+
+    document.getElementById('syncSettingsForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await saveSyncSettings();
+    });
+
+    // Загрузка текущих настроек синхронизации
+    async function loadSyncSettings() {
+        const token = localStorage.getItem('petochania_github_token');
+        const gistId = localStorage.getItem('petochania_gist_id');
+        
+        if (token) {
+            document.getElementById('githubToken').value = token;
+            document.getElementById('gistIdGroup').style.display = 'block';
+        }
+        if (gistId) {
+            document.getElementById('gistId').value = gistId;
+        }
+        
+        updateSyncStatus();
+    }
+
+    // Сохранение настроек синхронизации
+    async function saveSyncSettings() {
+        const token = document.getElementById('githubToken').value.trim();
+        const gistId = document.getElementById('gistId').value.trim();
+        
+        const submitText = document.getElementById('syncSubmitText');
+        const submitLoading = document.getElementById('syncSubmitLoading');
+        const statusDiv = document.getElementById('syncStatus');
+        
+        try {
+            submitText.style.display = 'none';
+            showLoading(submitLoading);
+            statusDiv.style.display = 'none';
+            
+            if (!token) {
+                throw new Error('Введите GitHub Personal Access Token');
+            }
+            
+            if (!window.githubSyncBackend) {
+                throw new Error('GitHub Sync Backend не загружен');
+            }
+            
+            const result = await window.githubSyncBackend.setup(token, gistId || null);
+            
+            // Переинициализируем бекенд
+            await initBackend();
+            
+            statusDiv.className = 'alert alert-success';
+            statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Настройки синхронизации сохранены успешно!';
+            statusDiv.style.display = 'block';
+            
+            updateSyncStatus();
+            showMessage('Настройки синхронизации сохранены', 'success');
+            
+        } catch (error) {
+            console.error('Error saving sync settings:', error);
+            statusDiv.className = 'alert alert-danger';
+            statusDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ошибка: ' + error.message;
+            statusDiv.style.display = 'block';
+            showMessage('Ошибка сохранения настроек: ' + error.message, 'error');
+        } finally {
+            submitText.style.display = 'inline';
+            hideLoading(submitLoading);
+        }
+    }
+
+    // Тестирование соединения
+    async function testSyncConnection() {
+        const token = document.getElementById('githubToken').value.trim();
+        const statusDiv = document.getElementById('syncStatus');
+        
+        if (!token) {
+            statusDiv.className = 'alert alert-warning';
+            statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Введите GitHub токен для проверки';
+            statusDiv.style.display = 'block';
+            return;
+        }
+        
+        try {
+            statusDiv.className = 'alert alert-info';
+            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка соединения...';
+            statusDiv.style.display = 'block';
+            
+            // Проверяем токен через API
+            const response = await fetch('https://api.github.com/user', {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Неверный токен или недостаточно прав');
+            }
+            
+            const user = await response.json();
+            
+            statusDiv.className = 'alert alert-success';
+            statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> Соединение успешно! Пользователь: ${user.login}`;
+            statusDiv.style.display = 'block';
+            
+        } catch (error) {
+            console.error('Error testing connection:', error);
+            statusDiv.className = 'alert alert-danger';
+            statusDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ошибка: ' + error.message;
+            statusDiv.style.display = 'block';
+        }
+    }
+
+    // Обновление статуса синхронизации
+    function updateSyncStatus() {
+        const backendTypeEl = document.getElementById('backendType');
+        const gistIdEl = document.getElementById('currentGistId');
+        const lastSyncEl = document.getElementById('lastSyncTime');
+        
+        if (backend === 'express') {
+            backendTypeEl.textContent = 'Локальный Express API';
+        } else if (backend && backend.initialized && window.githubSyncBackend && backend === window.githubSyncBackend) {
+            backendTypeEl.textContent = 'GitHub Sync Backend';
+            const gistId = localStorage.getItem('petochania_gist_id');
+            gistIdEl.textContent = gistId || 'Не настроен';
+        } else if (backend && backend.useFirebase) {
+            backendTypeEl.textContent = 'Firebase Backend';
+        } else {
+            backendTypeEl.textContent = 'localStorage (только локально)';
+        }
+        
+        const lastSync = localStorage.getItem('petochania_last_sync');
+        if (lastSync) {
+            const date = new Date(lastSync);
+            lastSyncEl.textContent = date.toLocaleString('ru-RU');
+        } else {
+            lastSyncEl.textContent = 'Никогда';
+        }
+    }
+
+    // Загружаем настройки синхронизации при загрузке страницы
+    loadSyncSettings();
 
     // Site logo upload
     document.getElementById('siteLogoUpload').addEventListener('click', function() {
