@@ -11,15 +11,48 @@ class DataSync {
         this.init();
     }
 
-    init() {
+    async init() {
         console.log('DataSync инициализируется');
-        this.loadInitialData();
+        await this.loadInitialData();
         this.setupStorageListener();
         console.log('DataSync готов к работе');
     }
 
-    loadInitialData() {
+    async loadInitialData() {
         console.log('Загрузка начальных данных...');
+        
+        // Пытаемся загрузить данные из GitHub Gist, если настроен
+        if (window.githubSyncBackend && window.githubSyncBackend.initialized) {
+            try {
+                console.log('Попытка загрузки данных из GitHub Gist...');
+                const gistData = await window.githubSyncBackend.loadData();
+                if (gistData && Object.keys(gistData).length > 0) {
+                    console.log('✅ Данные загружены из GitHub Gist');
+                    // Синхронизируем данные из Gist в localStorage
+                    if (gistData.cats) {
+                        localStorage.setItem(this.CATS_KEY, JSON.stringify(gistData.cats));
+                    }
+                    if (gistData.breedPages) {
+                        localStorage.setItem(this.BREED_PAGES_KEY, JSON.stringify(gistData.breedPages));
+                    }
+                    if (gistData.settings) {
+                        localStorage.setItem(this.SETTINGS_KEY, JSON.stringify(gistData.settings));
+                    }
+                    if (gistData.faq) {
+                        localStorage.setItem('petochania_faq', JSON.stringify(gistData.faq));
+                    }
+                    if (gistData.reviews) {
+                        localStorage.setItem('petochania_reviews', JSON.stringify(gistData.reviews));
+                    }
+                    if (gistData.videos) {
+                        localStorage.setItem('petochania_videos', JSON.stringify(gistData.videos));
+                    }
+                    return;
+                }
+            } catch (error) {
+                console.warn('Не удалось загрузить данные из GitHub Gist:', error);
+            }
+        }
         
         // Проверяем основные данные
         let allData = this.getAllData();
