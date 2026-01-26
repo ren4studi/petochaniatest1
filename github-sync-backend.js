@@ -11,16 +11,29 @@ class GitHubSyncBackend {
         this.init();
     }
 
-    init() {
-        // Получаем токен и ID gist из localStorage или запрашиваем у пользователя
+    async init() {
+        // Получаем токен из localStorage
         this.githubToken = localStorage.getItem('petochania_github_token');
-        this.gistId = localStorage.getItem('petochania_gist_id');
         
-        if (this.githubToken && this.gistId) {
+        // Получаем Gist ID из конфигурации или localStorage
+        // Сначала пробуем загрузить из конфигурационного файла (для всех пользователей)
+        if (window.syncConfigLoader) {
+            await window.syncConfigLoader.loadConfig();
+            this.gistId = window.syncConfigLoader.getGistId();
+        }
+        
+        // Fallback: из localStorage
+        if (!this.gistId) {
+            this.gistId = localStorage.getItem('petochania_gist_id');
+        }
+        
+        // Для чтения данных Gist ID достаточно (Gist публичный)
+        // Токен нужен только для записи
+        if (this.gistId) {
             this.initialized = true;
-            console.log('✅ GitHub Sync Backend инициализирован');
+            console.log('✅ GitHub Sync Backend инициализирован (Gist ID:', this.gistId + ')');
         } else {
-            console.warn('GitHub токен не настроен. Используется localStorage fallback.');
+            console.warn('GitHub Gist ID не настроен. Используется localStorage fallback.');
         }
     }
 
@@ -67,7 +80,7 @@ class GitHubSyncBackend {
                 },
                 body: JSON.stringify({
                     description: 'Petochania Data Sync',
-                    public: false,
+                    public: true, // Публичный Gist для чтения без токена
                     files: {
                         [this.GIST_FILENAME]: {
                             content: JSON.stringify(initialData, null, 2)
@@ -94,23 +107,28 @@ class GitHubSyncBackend {
 
     // Загрузка данных из Gist
     async loadData() {
-        if (!this.initialized || !this.gistId || !this.githubToken) {
-            return this.loadFromLocal();
+        // Для чтения публичного Gist токен не нужен
+        // Токен нужен только для записи
+        if (!this.gistId) {
+            // Пробуем загрузить Gist ID из localStorage
+            this.gistId = localStorage.getItem('petochania_gist_id');
+            if (!this.gistId) {
+                return this.loadFromLocal();
+            }
         }
 
         try {
+            // Загружаем публичный Gist без токена (для чтения)
             const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
                 headers: {
-                    'Authorization': `token ${this.githubToken}`,
                     'Accept': 'application/vnd.github.v3+json'
                 }
             });
 
             if (!response.ok) {
                 if (response.status === 404) {
-                    // Gist не найден, создаем новый
-                    await this.createGist();
-                    return this.loadData();
+                    console.warn('Gist не найден, используем локальные данные');
+                    return this.loadFromLocal();
                 }
                 throw new Error(`HTTP ${response.status}`);
             }
@@ -127,6 +145,7 @@ class GitHubSyncBackend {
             // Сохраняем в localStorage как кеш
             this.saveToLocal(data);
             
+            console.log('✅ Данные загружены из публичного Gist');
             return data;
         } catch (error) {
             console.error('Ошибка загрузки данных из Gist:', error);
@@ -139,8 +158,9 @@ class GitHubSyncBackend {
         // Сначала сохраняем локально для быстрого доступа
         this.saveToLocal(data);
 
-        if (!this.initialized || !this.gistId || !this.githubToken) {
-            console.warn('GitHub не настроен, данные сохранены только локально');
+        // Для записи нужен токен
+        if (!this.gistId || !this.githubToken) {
+            console.warn('GitHub токен не настроен, данные сохранены только локально');
             return { success: true, localOnly: true };
         }
 
