@@ -22,7 +22,9 @@ class DataSync {
         console.log('Загрузка начальных данных...');
         
         // Пытаемся загрузить данные из GitHub Gist, если настроен
-        if (window.githubSyncBackend && window.githubSyncBackend.initialized) {
+        // Проверяем наличие Gist ID (для публичного Gist токен не нужен)
+        const gistId = localStorage.getItem('petochania_gist_id');
+        if (window.githubSyncBackend && gistId) {
             try {
                 console.log('Попытка загрузки данных из GitHub Gist...');
                 const gistData = await window.githubSyncBackend.loadData();
@@ -47,6 +49,8 @@ class DataSync {
                     if (gistData.videos) {
                         localStorage.setItem('petochania_videos', JSON.stringify(gistData.videos));
                     }
+                    // Обновляем время последней синхронизации
+                    localStorage.setItem('petochania_last_sync', new Date().toISOString());
                     return;
                 }
             } catch (error) {
