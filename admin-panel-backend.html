@@ -8,16 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    
     <!-- Backend Services -->
     <script src="sync-config-loader.js"></script>
-    <script src="firebase-config.js"></script>
-    <script src="firebase-backend.js"></script>
     <script src="github-sync-backend.js"></script>
     
     <style>
@@ -1538,20 +1530,15 @@
                 return;
             }
 
-            // Приоритет 2: Firebase Backend (если настроен)
-            if (window.firebaseBackend) {
-                backend = window.firebaseBackend;
-                await backend.init();
-                if (backend.useFirebase) {
-                    console.log('✅ Используется Firebase Backend');
-                    return;
-                }
-            }
-
-            // Fallback: GitHub Sync Backend (даже без токена, будет работать локально)
+            // Используем GitHub Sync Backend (полностью бесплатный)
             if (window.githubSyncBackend) {
                 backend = window.githubSyncBackend;
-                console.log('⚠️ Используется GitHub Sync Backend (только локально, настройте токен для синхронизации)');
+                await backend.init();
+                if (backend.initialized) {
+                    console.log('✅ Используется GitHub Sync Backend (бесплатный)');
+                } else {
+                    console.log('⚠️ GitHub Sync Backend не настроен. Используется localStorage (только локально)');
+                }
                 return;
             }
 
@@ -5307,11 +5294,9 @@ function initSettingsManagement() {
         if (backend === 'express') {
             backendTypeEl.textContent = 'Локальный Express API';
         } else if (backend && backend.initialized && window.githubSyncBackend && backend === window.githubSyncBackend) {
-            backendTypeEl.textContent = 'GitHub Sync Backend';
-            const gistId = localStorage.getItem('petochania_gist_id');
+            backendTypeEl.textContent = 'GitHub Sync Backend (бесплатный)';
+            const gistId = localStorage.getItem('petochania_gist_id') || window.syncConfigLoader?.getGistId();
             gistIdEl.textContent = gistId || 'Не настроен';
-        } else if (backend && backend.useFirebase) {
-            backendTypeEl.textContent = 'Firebase Backend';
         } else {
             backendTypeEl.textContent = 'localStorage (только локально)';
         }
