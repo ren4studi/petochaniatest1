@@ -15,6 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     
     <!-- Backend Services -->
+    <script src="sync-config-loader.js"></script>
     <script src="firebase-config.js"></script>
     <script src="firebase-backend.js"></script>
     <script src="github-sync-backend.js"></script>
@@ -5227,11 +5228,16 @@ function initSettingsManagement() {
             
             const result = await window.githubSyncBackend.setup(token, gistId || null);
             
+            // Обновляем конфигурационный файл для всех пользователей
+            if (result.gistId) {
+                await updateSyncConfigFile(result.gistId);
+            }
+            
             // Переинициализируем бекенд
             await initBackend();
             
             statusDiv.className = 'alert alert-success';
-            statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Настройки синхронизации сохранены успешно!';
+            statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Настройки синхронизации сохранены успешно!<br><small>Gist ID автоматически доступен всем пользователям</small>';
             statusDiv.style.display = 'block';
             
             updateSyncStatus();
@@ -5317,6 +5323,91 @@ function initSettingsManagement() {
         } else {
             lastSyncEl.textContent = 'Никогда';
         }
+    }
+
+    // Обновление конфигурационного файла для всех пользователей
+    async function updateSyncConfigFile(gistId) {
+        // Пытаемся обновить файл sync-config.json в репозитории через GitHub API
+        // Это требует токен с правами на репозиторий
+        const token = localStorage.getItem('petochania_github_token');
+        if (!token) {
+            console.warn('Токен не найден, конфигурационный файл не будет обновлен');
+            return;
+        }
+
+        try {
+            // Получаем информацию о репозитории из URL
+            const repoInfo = getRepoInfoFromUrl();
+            if (!repoInfo) {
+                console.warn('Не удалось определить репозиторий из URL');
+                return;
+            }
+
+            // Получаем текущий файл
+            const fileUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/contents/sync-config.json`;
+            const fileResponse = await fetch(fileUrl, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            let sha = null;
+            if (fileResponse.ok) {
+                const fileData = await fileResponse.json();
+                sha = fileData.sha;
+            }
+
+            // Обновляем файл
+            const configContent = {
+                gistId: gistId,
+                lastUpdated: new Date().toISOString()
+            };
+
+            const updateResponse = await fetch(fileUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({
+                    message: 'Update sync config: Gist ID',
+                    content: btoa(JSON.stringify(configContent, null, 2)),
+                    sha: sha
+                })
+            });
+
+            if (updateResponse.ok) {
+                console.log('✅ Конфигурационный файл обновлен для всех пользователей');
+            } else {
+                const error = await updateResponse.json();
+                console.warn('Не удалось обновить конфигурационный файл:', error.message);
+                // Это не критично - Gist ID уже сохранен в localStorage
+            }
+        } catch (error) {
+            console.warn('Ошибка обновления конфигурационного файла:', error);
+            // Это не критично - Gist ID уже сохранен в localStorage
+        }
+    }
+
+    // Получение информации о репозитории из URL
+    function getRepoInfoFromUrl() {
+        // Для GitHub Pages URL выглядит как: https://username.github.io/repo-name/
+        const hostname = window.location.hostname;
+        const pathname = window.location.pathname;
+
+        if (hostname.includes('github.io')) {
+            const parts = hostname.split('.');
+            if (parts.length >= 2) {
+                const owner = parts[0];
+                // Извлекаем имя репозитория из pathname
+                const pathParts = pathname.split('/').filter(p => p);
+                const repo = pathParts[0] || 'petochania-master'; // fallback
+                return { owner, repo };
+            }
+        }
+        return null;
     }
 
     // Загружаем настройки синхронизации при загрузке страницы
