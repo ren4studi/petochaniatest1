@@ -12,12 +12,13 @@ class GitHubSyncBackend {
     }
 
     async init() {
-        // Получаем токен из localStorage
+        // Получаем токен из localStorage (нужен только для записи)
         this.githubToken = localStorage.getItem('petochania_github_token');
         
         // Получаем Gist ID из конфигурации или localStorage
         // Сначала пробуем загрузить из конфигурационного файла (для всех пользователей)
         if (window.syncConfigLoader) {
+            // Ждем загрузки конфигурации
             await window.syncConfigLoader.loadConfig();
             this.gistId = window.syncConfigLoader.getGistId();
         }
@@ -32,8 +33,10 @@ class GitHubSyncBackend {
         if (this.gistId) {
             this.initialized = true;
             console.log('✅ GitHub Sync Backend инициализирован (Gist ID:', this.gistId + ')');
+            console.log('📡 Данные будут синхронизироваться с GitHub Gist для всех пользователей');
         } else {
-            console.warn('GitHub Gist ID не настроен. Используется localStorage fallback.');
+            console.warn('⚠️ GitHub Gist ID не настроен. Используется localStorage fallback.');
+            console.warn('💡 Настройте синхронизацию в админ-панели для работы на GitHub Pages');
         }
     }
 
