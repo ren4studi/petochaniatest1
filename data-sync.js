@@ -23,7 +23,16 @@ class DataSync {
         
         // Пытаемся загрузить данные из GitHub Gist, если настроен
         // Проверяем наличие Gist ID (для публичного Gist токен не нужен)
-        const gistId = localStorage.getItem('petochania_gist_id');
+        // Сначала пробуем загрузить из sync-config.json (для всех пользователей)
+        let gistId = null;
+        if (window.syncConfigLoader) {
+            gistId = window.syncConfigLoader.getGistId();
+        }
+        // Fallback: из localStorage
+        if (!gistId) {
+            gistId = localStorage.getItem('petochania_gist_id');
+        }
+        
         if (window.githubSyncBackend && gistId) {
             try {
                 console.log('Попытка загрузки данных из GitHub Gist...');
