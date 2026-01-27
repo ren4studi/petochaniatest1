@@ -34,6 +34,11 @@ class GitHubSyncBackend {
             this.initialized = true;
             console.log('✅ GitHub Sync Backend инициализирован (Gist ID:', this.gistId + ')');
             console.log('📡 Данные будут синхронизироваться с GitHub Gist для всех пользователей');
+            if (this.githubToken) {
+                console.log('✅ GitHub токен найден, запись в Gist доступна');
+            } else {
+                console.warn('⚠️ GitHub токен не найден, запись в Gist будет недоступна');
+            }
         } else {
             console.warn('⚠️ GitHub Gist ID не настроен. Используется localStorage fallback.');
             console.warn('💡 Настройте синхронизацию в админ-панели для работы на GitHub Pages');
@@ -44,13 +49,18 @@ class GitHubSyncBackend {
     async setup(token, gistId = null) {
         this.githubToken = token;
         localStorage.setItem('petochania_github_token', token);
+        console.log('✅ GitHub токен сохранен');
         
-        if (gistId) {
-            this.gistId = gistId;
-            localStorage.setItem('petochania_gist_id', gistId);
+        if (gistId && gistId.trim()) {
+            this.gistId = gistId.trim();
+            localStorage.setItem('petochania_gist_id', this.gistId);
+            console.log('✅ Gist ID сохранен:', this.gistId);
         } else {
             // Создаем новый Gist
+            console.log('Создание нового Gist...');
             this.gistId = await this.createGist();
+            localStorage.setItem('petochania_gist_id', this.gistId);
+            console.log('✅ Новый Gist создан:', this.gistId);
         }
         
         this.initialized = true;
@@ -161,13 +171,32 @@ class GitHubSyncBackend {
         // Сначала сохраняем локально для быстрого доступа
         this.saveToLocal(data);
 
+        // Проверяем наличие Gist ID и токена
+        if (!this.gistId) {
+            // Пробуем загрузить из localStorage или конфига
+            if (window.syncConfigLoader) {
+                await window.syncConfigLoader.loadConfig();
+                this.gistId = window.syncConfigLoader.getGistId();
+            }
+            if (!this.gistId) {
+                this.gistId = localStorage.getItem('petochania_gist_id');
+            }
+        }
+        
+        if (!this.githubToken) {
+            this.githubToken = localStorage.getItem('petochania_github_token');
+        }
+
         // Для записи нужен токен
         if (!this.gistId || !this.githubToken) {
-            console.warn('GitHub токен не настроен, данные сохранены только локально');
+            console.warn('⚠️ GitHub токен или Gist ID не настроен, данные сохранены только локально');
+            console.warn('Gist ID:', this.gistId ? 'есть' : 'отсутствует');
+            console.warn('GitHub Token:', this.githubToken ? 'есть' : 'отсутствует');
             return { success: true, localOnly: true };
         }
 
         try {
+            console.log('💾 Сохранение данных в GitHub Gist...', { gistId: this.gistId });
             const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
                 method: 'PATCH',
                 headers: {
@@ -189,13 +218,21 @@ class GitHubSyncBackend {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.message || 'Ошибка сохранения в Gist');
+                console.error('❌ Ошибка ответа от GitHub API:', response.status, error);
+                throw new Error(error.message || `HTTP ${response.status}: Ошибка сохранения в Gist`);
             }
 
-            console.log('✅ Данные сохранены в GitHub Gist');
+            const result = await response.json();
+            console.log('✅ Данные успешно сохранены в GitHub Gist');
+            console.log('📡 Gist обновлен:', result.html_url || this.gistId);
             return { success: true };
         } catch (error) {
-            console.error('Ошибка сохранения данных в Gist:', error);
+            console.error('❌ Ошибка сохранения данных в Gist:', error);
+            console.error('Детали ошибки:', {
+                gistId: this.gistId,
+                hasToken: !!this.githubToken,
+                errorMessage: error.message
+            });
             // Данные уже сохранены локально, продолжаем работу
             return { success: true, localOnly: true, error: error.message };
         }
