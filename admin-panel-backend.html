@@ -3791,9 +3791,18 @@
             await initBackend();
             
             // Синхронизируем данные из Gist если backend инициализирован или есть Gist ID
-            const shouldSync = (backend && typeof backend === 'object' && backend.initialized) || 
-                              (window.githubSyncBackend && window.githubSyncBackend.gistId) ||
-                              localStorage.getItem('petochania_gist_id');
+            const gistIdFromStorage = localStorage.getItem('petochania_gist_id');
+            const gistIdFromBackend = window.githubSyncBackend?.gistId;
+            const backendInitialized = backend && typeof backend === 'object' && backend.initialized;
+            
+            const shouldSync = backendInitialized || gistIdFromBackend || gistIdFromStorage;
+            
+            console.log('🔍 Проверка синхронизации:', {
+                backendInitialized,
+                gistIdFromBackend,
+                gistIdFromStorage,
+                shouldSync
+            });
             
             if (shouldSync) {
                 try {
@@ -3830,6 +3839,15 @@
                                 console.log('✅ Настройки синхронизированы');
                             }
                             console.log('✅ Все данные успешно синхронизированы из GitHub Gist');
+                            
+                            // Принудительно обновляем интерфейс после синхронизации
+                            if (authToken) {
+                                console.log('🔄 Обновление интерфейса после синхронизации...');
+                                await updateBreedPagesList();
+                                await loadCatsList();
+                                await updateDashboard();
+                                console.log('✅ Интерфейс обновлен с синхронизированными данными');
+                            }
                         }
                     } else {
                         console.warn('⚠️ Backend не поддерживает загрузку данных из Gist');
@@ -3845,12 +3863,26 @@
             await loadSyncSettings();
             
             // Load initial data if already logged in
-            if (authToken) {
-                // Обновляем списки после синхронизации, чтобы показать актуальные данные
+            // Если синхронизация произошла выше, интерфейс уже обновлен
+            // Если синхронизации не было, загружаем данные из localStorage
+            if (authToken && !shouldSync) {
+                // Синхронизации не было, загружаем локальные данные
                 await updateBreedPagesList();
                 await loadCatsList();
                 await updateDashboard();
-                console.log('✅ Интерфейс обновлен с синхронизированными данными');
+                console.log('✅ Интерфейс обновлен с локальными данными (синхронизация не выполнялась)');
+            } else if (authToken && shouldSync) {
+                // Синхронизация была, но интерфейс мог не обновиться (если не было authToken во время синхронизации)
+                // Проверяем, нужно ли обновить интерфейс
+                const cats = JSON.parse(localStorage.getItem('petochania_cats') || '[]');
+                if (cats.length > 0) {
+                    // Данные есть, но интерфейс мог не обновиться
+                    await updateBreedPagesList();
+                    await loadCatsList();
+                    await updateDashboard();
+                    console.log('✅ Интерфейс обновлен после проверки синхронизированных данных');
+                }
+            }
                 
                 // Загружаем начальные данные пород если их нет
                 const breedPages = JSON.parse(localStorage.getItem('petochania_breedPages') || '{}');
@@ -5826,6 +5858,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                         console.log('✅ Настройки синхронизированы');
                     }
                     console.log('✅ Данные новых разделов успешно синхронизированы из GitHub Gist');
+                    
+                    // Принудительно обновляем интерфейс после синхронизации
+                    if (authToken) {
+                        console.log('🔄 Обновление интерфейса после синхронизации новых разделов...');
+                        await loadFaqList();
+                        await loadReviewsList();
+                        await loadVideosList();
+                        await loadSettings();
+                        console.log('✅ Интерфейс новых разделов обновлен с синхронизированными данными');
+                    }
                 }
             }
         } catch (error) {
@@ -5836,8 +5878,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Загружаем настройки синхронизации после инициализации backend
     await loadSyncSettings();
     
-    // Load initial data for new sections
+    // Load initial data for new sections (если синхронизация не произошла выше или нужно обновить интерфейс)
     if (authToken) {
+        // Всегда обновляем интерфейс, чтобы показать актуальные данные
+        // Если синхронизация произошла выше, данные уже в localStorage
         await loadFaqList();
         await loadReviewsList();
         await loadVideosList();
@@ -5845,6 +5889,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Load default data if empty
         await loadDefaultData();
+        
+        console.log('✅ Интерфейс новых разделов готов');
     }
 });
 
