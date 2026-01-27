@@ -3787,6 +3787,45 @@
             initBreedPagesForm();
             initCatsForm();
             
+            // Инициализируем backend перед загрузкой данных
+            await initBackend();
+            
+            // Синхронизируем данные из Gist если backend инициализирован
+            if (backend && typeof backend === 'object' && backend.initialized && window.githubSyncBackend && backend === window.githubSyncBackend) {
+                try {
+                    console.log('Синхронизация данных из GitHub Gist...');
+                    const gistData = await backend.loadData();
+                    if (gistData) {
+                        // Синхронизируем данные из Gist в localStorage
+                        if (gistData.cats) {
+                            localStorage.setItem('petochania_cats', JSON.stringify(gistData.cats));
+                        }
+                        if (gistData.breedPages) {
+                            localStorage.setItem('breedPages', JSON.stringify(gistData.breedPages));
+                            localStorage.setItem('petochania_breedPages', JSON.stringify(gistData.breedPages));
+                        }
+                        if (gistData.faq) {
+                            localStorage.setItem('petochania_faq', JSON.stringify(gistData.faq));
+                        }
+                        if (gistData.reviews) {
+                            localStorage.setItem('petochania_reviews', JSON.stringify(gistData.reviews));
+                        }
+                        if (gistData.videos) {
+                            localStorage.setItem('petochania_videos', JSON.stringify(gistData.videos));
+                        }
+                        if (gistData.settings) {
+                            localStorage.setItem('petochania_site_settings', JSON.stringify(gistData.settings));
+                        }
+                        console.log('✅ Данные синхронизированы из GitHub Gist');
+                    }
+                } catch (error) {
+                    console.warn('Не удалось синхронизировать данные из Gist:', error);
+                }
+            }
+            
+            // Загружаем настройки синхронизации после инициализации backend
+            await loadSyncSettings();
+            
             // Load initial data if already logged in
             if (authToken) {
                 await updateBreedPagesList();
@@ -5197,15 +5236,38 @@ function initSettingsManagement() {
 
     // Загрузка текущих настроек синхронизации
     async function loadSyncSettings() {
+        // Ждем загрузки sync-config если доступен
+        if (window.syncConfigLoader) {
+            await window.syncConfigLoader.loadConfig();
+        }
+        
         const token = localStorage.getItem('petochania_github_token');
-        const gistId = localStorage.getItem('petochania_gist_id');
+        // Пробуем получить Gist ID из разных источников
+        let gistId = localStorage.getItem('petochania_gist_id');
+        if (!gistId && window.syncConfigLoader) {
+            gistId = window.syncConfigLoader.getGistId();
+        }
+        if (!gistId && window.githubSyncBackend && window.githubSyncBackend.gistId) {
+            gistId = window.githubSyncBackend.gistId;
+        }
         
         if (token) {
-            document.getElementById('githubToken').value = token;
-            document.getElementById('gistIdGroup').style.display = 'block';
+            const tokenInput = document.getElementById('githubToken');
+            if (tokenInput) {
+                tokenInput.value = token;
+                const gistIdGroup = document.getElementById('gistIdGroup');
+                if (gistIdGroup) {
+                    gistIdGroup.style.display = 'block';
+                }
+            }
         }
         if (gistId) {
-            document.getElementById('gistId').value = gistId;
+            const gistIdInput = document.getElementById('gistId');
+            if (gistIdInput) {
+                gistIdInput.value = gistId;
+                // Сохраняем в localStorage для быстрого доступа
+                localStorage.setItem('petochania_gist_id', gistId);
+            }
         }
         
         updateSyncStatus();
@@ -5238,17 +5300,33 @@ function initSettingsManagement() {
             // Обновляем конфигурационный файл для всех пользователей
             if (result.gistId) {
                 await updateSyncConfigFile(result.gistId);
+                // Сохраняем Gist ID в localStorage для надежности
+                localStorage.setItem('petochania_gist_id', result.gistId);
             }
             
             // Переинициализируем бекенд
+            // Сбрасываем флаг initialized чтобы принудительно переинициализировать
+            if (window.githubSyncBackend) {
+                window.githubSyncBackend.initialized = false;
+            }
             await initBackend();
             
+            // Обновляем форму настроек с новым Gist ID
+            await loadSyncSettings();
+            
+            // Проверяем, что backend правильно инициализирован
+            if (backend && typeof backend === 'object' && backend.initialized) {
+                console.log('✅ Backend успешно переинициализирован с Gist ID:', backend.gistId);
+            } else {
+                console.warn('⚠️ Backend не был правильно инициализирован после сохранения настроек');
+            }
+            
             statusDiv.className = 'alert alert-success';
-            statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Настройки синхронизации сохранены успешно!<br><small>Gist ID автоматически доступен всем пользователям</small>';
+            statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Настройки синхронизации сохранены успешно!<br><small>Gist ID: ' + result.gistId + '</small><br><small>Gist ID автоматически доступен всем пользователям</small>';
             statusDiv.style.display = 'block';
             
             updateSyncStatus();
-            showMessage('Настройки синхронизации сохранены', 'success');
+            showMessage('Настройки синхронизации сохранены. Gist ID: ' + result.gistId, 'success');
             
         } catch (error) {
             console.error('Error saving sync settings:', error);
@@ -5415,8 +5493,8 @@ function initSettingsManagement() {
         return null;
     }
 
-    // Загружаем настройки синхронизации при загрузке страницы
-    loadSyncSettings();
+    // Загружаем настройки синхронизации после инициализации backend
+    // Это будет вызвано после загрузки DOM и инициализации backend
 
     // Site logo upload
     document.getElementById('siteLogoUpload').addEventListener('click', function() {
@@ -5693,6 +5771,38 @@ document.addEventListener('DOMContentLoaded', async function() {
     initReviewsManagement();
     initVideosManagement();
     initSettingsManagement();
+    
+    // Инициализируем backend перед загрузкой данных
+    await initBackend();
+    
+    // Синхронизируем данные из Gist если backend инициализирован
+    if (backend && typeof backend === 'object' && backend.initialized && window.githubSyncBackend && backend === window.githubSyncBackend) {
+        try {
+            console.log('Синхронизация данных из GitHub Gist для новых разделов...');
+            const gistData = await backend.loadData();
+            if (gistData) {
+                // Синхронизируем данные из Gist в localStorage
+                if (gistData.faq) {
+                    localStorage.setItem('petochania_faq', JSON.stringify(gistData.faq));
+                }
+                if (gistData.reviews) {
+                    localStorage.setItem('petochania_reviews', JSON.stringify(gistData.reviews));
+                }
+                if (gistData.videos) {
+                    localStorage.setItem('petochania_videos', JSON.stringify(gistData.videos));
+                }
+                if (gistData.settings) {
+                    localStorage.setItem('petochania_site_settings', JSON.stringify(gistData.settings));
+                }
+                console.log('✅ Данные новых разделов синхронизированы из GitHub Gist');
+            }
+        } catch (error) {
+            console.warn('Не удалось синхронизировать данные из Gist:', error);
+        }
+    }
+    
+    // Загружаем настройки синхронизации после инициализации backend
+    await loadSyncSettings();
     
     // Load initial data for new sections
     if (authToken) {
