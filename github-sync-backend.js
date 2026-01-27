@@ -378,6 +378,22 @@ class GitHubSyncBackend {
             reader.readAsDataURL(file);
         });
     }
+
+    // ========== АВТОРИЗАЦИЯ ==========
+    async login(username, password) {
+        // Простая проверка логина и пароля
+        // В продакшене это должно быть более безопасно
+        if (username === 'admin' && password === 'admin123') {
+            const token = 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('petochania_authToken', token);
+            return { 
+                success: true, 
+                token, 
+                user: { username, role: 'admin' } 
+            };
+        }
+        throw new Error('Неверный логин или пароль');
+    }
 }
 
 // Создаем глобальный экземпляр
