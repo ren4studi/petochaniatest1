@@ -3790,37 +3790,55 @@
             // Инициализируем backend перед загрузкой данных
             await initBackend();
             
-            // Синхронизируем данные из Gist если backend инициализирован
-            if (backend && typeof backend === 'object' && backend.initialized && window.githubSyncBackend && backend === window.githubSyncBackend) {
+            // Синхронизируем данные из Gist если backend инициализирован или есть Gist ID
+            const shouldSync = (backend && typeof backend === 'object' && backend.initialized) || 
+                              (window.githubSyncBackend && window.githubSyncBackend.gistId) ||
+                              localStorage.getItem('petochania_gist_id');
+            
+            if (shouldSync) {
                 try {
-                    console.log('Синхронизация данных из GitHub Gist...');
-                    const gistData = await backend.loadData();
-                    if (gistData) {
-                        // Синхронизируем данные из Gist в localStorage
-                        if (gistData.cats) {
-                            localStorage.setItem('petochania_cats', JSON.stringify(gistData.cats));
+                    console.log('🔄 Синхронизация данных из GitHub Gist...');
+                    // Используем githubSyncBackend напрямую если он доступен
+                    const syncBackend = window.githubSyncBackend || backend;
+                    if (syncBackend && typeof syncBackend.loadData === 'function') {
+                        const gistData = await syncBackend.loadData();
+                        if (gistData) {
+                            // Синхронизируем данные из Gist в localStorage
+                            if (gistData.cats) {
+                                localStorage.setItem('petochania_cats', JSON.stringify(gistData.cats));
+                                console.log('✅ Кошки синхронизированы:', gistData.cats.length);
+                            }
+                            if (gistData.breedPages) {
+                                localStorage.setItem('breedPages', JSON.stringify(gistData.breedPages));
+                                localStorage.setItem('petochania_breedPages', JSON.stringify(gistData.breedPages));
+                                console.log('✅ Страницы пород синхронизированы');
+                            }
+                            if (gistData.faq) {
+                                localStorage.setItem('petochania_faq', JSON.stringify(gistData.faq));
+                                console.log('✅ FAQ синхронизированы:', gistData.faq.length);
+                            }
+                            if (gistData.reviews) {
+                                localStorage.setItem('petochania_reviews', JSON.stringify(gistData.reviews));
+                                console.log('✅ Отзывы синхронизированы:', gistData.reviews.length);
+                            }
+                            if (gistData.videos) {
+                                localStorage.setItem('petochania_videos', JSON.stringify(gistData.videos));
+                                console.log('✅ Видео синхронизированы:', gistData.videos.length);
+                            }
+                            if (gistData.settings) {
+                                localStorage.setItem('petochania_site_settings', JSON.stringify(gistData.settings));
+                                console.log('✅ Настройки синхронизированы');
+                            }
+                            console.log('✅ Все данные успешно синхронизированы из GitHub Gist');
                         }
-                        if (gistData.breedPages) {
-                            localStorage.setItem('breedPages', JSON.stringify(gistData.breedPages));
-                            localStorage.setItem('petochania_breedPages', JSON.stringify(gistData.breedPages));
-                        }
-                        if (gistData.faq) {
-                            localStorage.setItem('petochania_faq', JSON.stringify(gistData.faq));
-                        }
-                        if (gistData.reviews) {
-                            localStorage.setItem('petochania_reviews', JSON.stringify(gistData.reviews));
-                        }
-                        if (gistData.videos) {
-                            localStorage.setItem('petochania_videos', JSON.stringify(gistData.videos));
-                        }
-                        if (gistData.settings) {
-                            localStorage.setItem('petochania_site_settings', JSON.stringify(gistData.settings));
-                        }
-                        console.log('✅ Данные синхронизированы из GitHub Gist');
+                    } else {
+                        console.warn('⚠️ Backend не поддерживает загрузку данных из Gist');
                     }
                 } catch (error) {
-                    console.warn('Не удалось синхронизировать данные из Gist:', error);
+                    console.error('❌ Не удалось синхронизировать данные из Gist:', error);
                 }
+            } else {
+                console.warn('⚠️ Gist ID не найден, синхронизация пропущена');
             }
             
             // Загружаем настройки синхронизации после инициализации backend
@@ -3828,9 +3846,11 @@
             
             // Load initial data if already logged in
             if (authToken) {
+                // Обновляем списки после синхронизации, чтобы показать актуальные данные
                 await updateBreedPagesList();
                 await loadCatsList();
                 await updateDashboard();
+                console.log('✅ Интерфейс обновлен с синхронизированными данными');
                 
                 // Загружаем начальные данные пород если их нет
                 const breedPages = JSON.parse(localStorage.getItem('petochania_breedPages') || '{}');
@@ -5775,29 +5795,41 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Инициализируем backend перед загрузкой данных
     await initBackend();
     
-    // Синхронизируем данные из Gist если backend инициализирован
-    if (backend && typeof backend === 'object' && backend.initialized && window.githubSyncBackend && backend === window.githubSyncBackend) {
+    // Синхронизируем данные из Gist если backend инициализирован или есть Gist ID
+    const shouldSync = (backend && typeof backend === 'object' && backend.initialized) || 
+                      (window.githubSyncBackend && window.githubSyncBackend.gistId) ||
+                      localStorage.getItem('petochania_gist_id');
+    
+    if (shouldSync) {
         try {
-            console.log('Синхронизация данных из GitHub Gist для новых разделов...');
-            const gistData = await backend.loadData();
-            if (gistData) {
-                // Синхронизируем данные из Gist в localStorage
-                if (gistData.faq) {
-                    localStorage.setItem('petochania_faq', JSON.stringify(gistData.faq));
+            console.log('🔄 Синхронизация данных из GitHub Gist для новых разделов...');
+            // Используем githubSyncBackend напрямую если он доступен
+            const syncBackend = window.githubSyncBackend || backend;
+            if (syncBackend && typeof syncBackend.loadData === 'function') {
+                const gistData = await syncBackend.loadData();
+                if (gistData) {
+                    // Синхронизируем данные из Gist в localStorage
+                    if (gistData.faq) {
+                        localStorage.setItem('petochania_faq', JSON.stringify(gistData.faq));
+                        console.log('✅ FAQ синхронизированы:', gistData.faq.length);
+                    }
+                    if (gistData.reviews) {
+                        localStorage.setItem('petochania_reviews', JSON.stringify(gistData.reviews));
+                        console.log('✅ Отзывы синхронизированы:', gistData.reviews.length);
+                    }
+                    if (gistData.videos) {
+                        localStorage.setItem('petochania_videos', JSON.stringify(gistData.videos));
+                        console.log('✅ Видео синхронизированы:', gistData.videos.length);
+                    }
+                    if (gistData.settings) {
+                        localStorage.setItem('petochania_site_settings', JSON.stringify(gistData.settings));
+                        console.log('✅ Настройки синхронизированы');
+                    }
+                    console.log('✅ Данные новых разделов успешно синхронизированы из GitHub Gist');
                 }
-                if (gistData.reviews) {
-                    localStorage.setItem('petochania_reviews', JSON.stringify(gistData.reviews));
-                }
-                if (gistData.videos) {
-                    localStorage.setItem('petochania_videos', JSON.stringify(gistData.videos));
-                }
-                if (gistData.settings) {
-                    localStorage.setItem('petochania_site_settings', JSON.stringify(gistData.settings));
-                }
-                console.log('✅ Данные новых разделов синхронизированы из GitHub Gist');
             }
         } catch (error) {
-            console.warn('Не удалось синхронизировать данные из Gist:', error);
+            console.error('❌ Не удалось синхронизировать данные из Gist:', error);
         }
     }
     
