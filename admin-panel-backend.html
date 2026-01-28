@@ -3885,27 +3885,11 @@
             await loadSyncSettings();
             
             // Load initial data if already logged in
-            // Если синхронизация произошла выше, интерфейс уже обновлен
-            // Если синхронизации не было, загружаем данные из localStorage
-            if (authToken && !shouldSync) {
-                // Синхронизации не было, загружаем локальные данные
+            if (authToken) {
                 await updateBreedPagesList();
                 await loadCatsList();
                 await updateDashboard();
-                console.log('✅ Интерфейс обновлен с локальными данными (синхронизация не выполнялась)');
-            } else if (authToken && shouldSync) {
-                // Синхронизация была, но интерфейс мог не обновиться (если не было authToken во время синхронизации)
-                // Проверяем, нужно ли обновить интерфейс
-                const cats = JSON.parse(localStorage.getItem('petochania_cats') || '[]');
-                if (cats.length > 0) {
-                    // Данные есть, но интерфейс мог не обновиться
-                    await updateBreedPagesList();
-                    await loadCatsList();
-                    await updateDashboard();
-                    console.log('✅ Интерфейс обновлен после проверки синхронизированных данных');
-                }
-            }
-                
+
                 // Загружаем начальные данные пород если их нет
                 const breedPages = JSON.parse(localStorage.getItem('petochania_breedPages') || '{}');
                 if (Object.keys(breedPages).length === 0) {
