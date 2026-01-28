@@ -580,7 +580,7 @@
                 <label for="password">Пароль</label>
                 <input type="password" id="password" class="form-control" placeholder="Введите пароль" value="admin">
             </div>
-            <button id="loginBtn" class="btn btn-primary" style="width: 100%;">
+            <button id="loginBtn" class="btn btn-primary" style="width: 100%;" onclick="handleLoginClick()">
                 <span id="loginText">Войти</span>
                 <div id="loginLoading" class="loading" style="display: none; margin: 0 auto;"></div>
             </button>
@@ -3634,21 +3634,8 @@
             return defaults[breedId] || {};
         }
 
-        // Initialize the application
-        document.addEventListener('DOMContentLoaded', async function() {
-            // Проверяем авторизацию
-            if (authToken) {
-                try {
-                    showAdminPanel();
-                } catch (error) {
-                    console.log('Invalid token, showing login page');
-                    authToken = '';
-                    localStorage.removeItem('petochania_authToken');
-                }
-            }
-
-            // Login functionality
-            document.getElementById('loginBtn').addEventListener('click', async function() {
+        // Глобальный обработчик логина (используется и через addEventListener, и через onclick)
+        async function handleLoginClick() {
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
                 const messageEl = document.getElementById('loginMessage');
@@ -3665,29 +3652,29 @@
                     showLoading(loginLoading);
                     messageEl.textContent = '';
 
-                    // 1) Локальный безопасный вход без обращения к бэкенду.
-                    // Это гарантирует работу логина даже если API недоступно,
-                    // критично для GitHub Pages и других статических хостингов.
-                    if (username === 'admin' && (password === 'admin' || password === 'admin123')) {
-                        authToken = 'token_' + Date.now();
-                        localStorage.setItem('petochania_authToken', authToken);
-                        currentUser = { username: 'admin', role: 'admin' };
-                        localStorage.setItem('petochania_currentUser', JSON.stringify(currentUser));
-                        
-                        showAdminPanel();
-                        showMessage('Успешный вход в систему!', 'success');
-                        return;
-                    }
+                // 1) Локальный безопасный вход без обращения к бэкенду.
+                // Это гарантирует работу логина даже если API недоступно,
+                // критично для GitHub Pages и других статических хостингов.
+                if (username === 'admin' && (password === 'admin' || password === 'admin123')) {
+                    authToken = 'token_' + Date.now();
+                    localStorage.setItem('petochania_authToken', authToken);
+                    currentUser = { username: 'admin', role: 'admin' };
+                    localStorage.setItem('petochania_currentUser', JSON.stringify(currentUser));
                     
-                    // 2) Стандартный путь через apiService (Express / GitHub backend)
-                    const response = await apiService.login(username, password);
-                    
-                    if (response && response.success) {
-                        showAdminPanel();
-                        showMessage('Успешный вход в систему!', 'success');
-                    } else {
-                        throw new Error((response && response.error) || 'Неверный логин или пароль');
-                    }
+                    showAdminPanel();
+                    showMessage('Успешный вход в систему!', 'success');
+                    return;
+                }
+                
+                // 2) Стандартный путь через apiService (Express / GitHub backend)
+                const response = await apiService.login(username, password);
+                
+                if (response && response.success) {
+                    showAdminPanel();
+                    showMessage('Успешный вход в систему!', 'success');
+                } else {
+                    throw new Error((response && response.error) || 'Неверный логин или пароль');
+                }
                 } catch (error) {
                     console.error('Login error handler:', error);
                     messageEl.textContent = 'Ошибка входа: ' + (error.message || 'Неизвестная ошибка');
@@ -3695,7 +3682,26 @@
                     loginText.style.display = 'inline';
                     hideLoading(loginLoading);
                 }
-            });
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Проверяем авторизацию
+            if (authToken) {
+                try {
+                    showAdminPanel();
+                } catch (error) {
+                    console.log('Invalid token, showing login page');
+                    authToken = '';
+                    localStorage.removeItem('petochania_authToken');
+                }
+            }
+
+            // Login functionality (дублируем на случай, если отключен inline-обработчик)
+            const loginBtn = document.getElementById('loginBtn');
+            if (loginBtn) {
+                loginBtn.addEventListener('click', handleLoginClick);
+            }
 
             // Logout functionality
             document.getElementById('logoutBtn').addEventListener('click', function() {
