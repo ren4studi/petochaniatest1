@@ -91,55 +91,8 @@ class DataSync {
         }
     }
 
-    // В классе DataSync добавьте:
-getBreedCats(breedName) {
-    try {
-        console.log('Поиск котят для породы:', breedName);
-        const cats = this.getAllCats();
-        console.log('Всего кошек в системе:', cats.length);
-        
-        const filteredCats = cats.filter(cat => {
-            if (!cat.breed) {
-                console.log('Коша без породы:', cat.name);
-                return false;
-            }
-            
-            const catBreedLower = cat.breed.toLowerCase();
-            const searchNameLower = breedName.toLowerCase();
-            
-            const matches = catBreedLower.includes(searchNameLower) || 
-                           searchNameLower.includes(catBreedLower);
-            
-            if (matches) {
-                console.log('Найден котенок:', cat.name, 'порода:', cat.breed);
-            }
-            
-            return matches;
-        });
-        
-        console.log('Найдено котят для породы', breedName + ':', filteredCats.length);
-        return filteredCats;
-    } catch (error) {
-        console.error('Error getting breed cats:', error);
-        return [];
-    }
-}
-
     getDefaultBreedPages() {
         return {
-            'chinchilla': {
-                id: 'chinchilla',
-                title: 'Золотая Шиншилла',
-                heroDescription: 'Аристократичные британцы с роскошной золотистой шерстью и королевским характером',
-                description: 'Золотые шиншиллы — одна из самых красивых и редких пород кошек. Их шерсть имеет уникальный золотистый оттенок с затемнениями на кончиках, создавая эффект сияния. Эти аристократичные кошки обладают спокойным и уравновешенным характером, идеально подходят для жизни в семье.',
-                origin: 'Великобритания',
-                weight: '4-6 кг',
-                lifespan: '12-15 лет',
-                temperament: 'Спокойный, нежный',
-                characteristics: ['Любопытный', 'Дружелюбный', 'Элегантный', 'Спокойный', 'Независимый'],
-                mainImage: 'img/goldshinshina.JPG',
-                lastUpdated: new Date().toISOString()
-            },
             'devon': {
                 id: 'devon',
                 title: 'Девон-рекс',
@@ -151,19 +104,6 @@ getBreedCats(breedName) {
                 temperament: 'Активный, игривый',
                 characteristics: ['Ласковый', 'Игривый', 'Умный', 'Общительный', 'Энергичный'],
                 mainImage: 'img/devon-reks.JPG',
-                lastUpdated: new Date().toISOString()
-            },
-            'munchkin': {
-                id: 'munchkin',
-                title: 'Манчкин',
-                heroDescription: 'Очаровательные коротколапые кошки с уникальной внешностью и дружелюбным нравом',
-                description: 'Манчкины — уникальная порода кошек с короткими лапками, появившаяся в результате естественной генетической мутации. Несмотря на короткие конечности, эти кошки очень подвижны и активны. Манчкины известны своим дружелюбным и общительным характером.',
-                origin: 'США',
-                weight: '3-4 кг',
-                lifespan: '12-15 лет',
-                temperament: 'Дружелюбный, любопытный',
-                characteristics: ['Величественная', 'Умная', 'Любопытная', 'Дружелюбная', 'Общительная'],
-                mainImage: 'img/machkin.JPG',
                 lastUpdated: new Date().toISOString()
             }
         };

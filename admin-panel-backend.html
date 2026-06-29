@@ -743,9 +743,7 @@
                                     <label for="catBreed">Порода *</label>
                                     <select id="catBreed" class="form-control" required>
                                         <option value="">Выберите породу</option>
-                                        <option value="Золотая Шиншилла">Золотая Шиншилла</option>
                                         <option value="Девон-рекс">Девон-рекс</option>
-                                        <option value="Манчкин">Манчкин</option>
                                     </select>
                                 </div>
                             </div>
@@ -2454,9 +2452,7 @@
                 } else {
                     // Показываем стандартное изображение
                     const defaultImages = {
-                        'chinchilla': 'img/goldshinshina.JPG',
-                        'devon': 'img/devon-reks.JPG',
-                        'munchkin': 'img/machkin.JPG'
+                        'devon': 'img/devon-reks.JPG'
                     };
                     
                     if (defaultImages[breedId]) {
@@ -2684,8 +2680,7 @@
         // Загрузка котят для породы
         async function loadBreedKittens(breedId) {
             try {
-                const breedTitle = breedId === 'chinchilla' ? 'Золотая Шиншилла' : 
-                                  breedId === 'devon' ? 'Девон-рекс' : 'Манчкин';
+                const breedTitle = 'Девон-рекс';
                 
                 const cats = await getCatsFromStorage();
                 const breedCats = cats.filter(cat => 
@@ -3234,9 +3229,7 @@
         // Функция для получения названия породы по ID
         function getBreedNameById(breedId) {
             const breedMap = {
-                'chinchilla': 'Золотая Шиншилла',
-                'devon': 'Девон-рекс', 
-                'munchkin': 'Манчкин'
+                'devon': 'Девон-рекс'
             };
             return breedMap[breedId] || '';
         }
@@ -3510,9 +3503,7 @@
                 tbody.innerHTML = '';
                 
                 const breeds = [
-                    { id: 'chinchilla', name: 'Золотая Шиншилла', url: '/chinchilla.html' },
-                    { id: 'devon', name: 'Девон-рекс', url: '/devon.html' },
-                    { id: 'munchkin', name: 'Манчкин', url: '/munchkin.html' }
+                    { id: 'devon', name: 'Девон-рекс', url: '/devon.html' }
                 ];
                 
                 breeds.forEach(breed => {
@@ -3599,16 +3590,6 @@
         // Получение данных по умолчанию для породы
         function getDefaultBreedData(breedId) {
             const defaults = {
-                'chinchilla': {
-                    title: 'Золотая Шиншилла',
-                    heroDescription: 'Аристократичные британцы с роскошной золотистой шерстью и королевским характером',
-                    description: 'Золотые шиншиллы — одна из самых красивых и редких пород кошек. Их шерсть имеет уникальный золотистый оттенок с затемнениями на кончиках, создавая эффект сияния. Эти аристократичные кошки обладают спокойным и уравновешенным характером, идеально подходят для жизни в семье.',
-                    origin: 'Великобритания',
-                    weight: '4-6 кг',
-                    lifespan: '12-15 лет',
-                    temperament: 'Спокойный, нежный',
-                    characteristics: ['Любопытный', 'Дружелюбный', 'Элегантный', 'Спокойный', 'Независимый']
-                },
                 'devon': {
                     title: 'Девон-рекс',
                     heroDescription: 'Энергичные и любвеобильные кошки с инопланетной внешностью и собачьим характером',
@@ -3618,16 +3599,6 @@
                     lifespan: '9-15 лет',
                     temperament: 'Активный, игривый',
                     characteristics: ['Ласковый', 'Игривый', 'Умный', 'Общительный', 'Энергичный']
-                },
-                'munchkin': {
-                    title: 'Манчкин',
-                    heroDescription: 'Очаровательные коротколапые кошки с уникальной внешностью и дружелюбным нравом',
-                    description: 'Манчкины — уникальная порода кошек с короткими лапками, появившаяся в результате естественной генетической мутации. Несмотря на короткие конечности, эти кошки очень подвижны и активны. Манчкины известны своим дружелюбным и общительным характером.',
-                    origin: 'США',
-                    weight: '3-4 кг',
-                    lifespan: '12-15 лет',
-                    temperament: 'Дружелюбный, любопытный',
-                    characteristics: ['Величественная', 'Умная', 'Любопытная', 'Дружелюбная', 'Общительная']
                 }
             };
             
@@ -3894,9 +3865,7 @@
                 const breedPages = JSON.parse(localStorage.getItem('petochania_breedPages') || '{}');
                 if (Object.keys(breedPages).length === 0) {
                     const defaultBreeds = {
-                        'chinchilla': getDefaultBreedData('chinchilla'),
-                        'devon': getDefaultBreedData('devon'),
-                        'munchkin': getDefaultBreedData('munchkin')
+                        'devon': getDefaultBreedData('devon')
                     };
                     localStorage.setItem('petochania_breedPages', JSON.stringify(defaultBreeds));
                     localStorage.setItem('breedPages', JSON.stringify(defaultBreeds));
@@ -3924,18 +3893,9 @@
                 const activities = [];
                 
                 // Подсчитываем котят по породам
-                const chinchillaCats = cats.filter(cat => cat.breed && cat.breed.includes('Золотая Шиншилла')).length;
                 const devonCats = cats.filter(cat => cat.breed && cat.breed.includes('Девон-рекс')).length;
-                const munchkinCats = cats.filter(cat => cat.breed && cat.breed.includes('Манчкин')).length;
-                
-                if (chinchillaCats > 0) {
-                    activities.push(`${chinchillaCats} котят золотой шиншиллы`);
-                }
                 if (devonCats > 0) {
                     activities.push(`${devonCats} котят девон-рекса`);
-                }
-                if (munchkinCats > 0) {
-                    activities.push(`${munchkinCats} котят манчкина`);
                 }
                 
                 if (cats.length > 0) {
@@ -5947,7 +5907,7 @@ async function loadDefaultData() {
             {
                 id: 'review_1',
                 author: 'Анна',
-                text: 'Покупали кошечку породы золотистая шиншилла. Невероятно красивая! Все знакомые восхищаются. Здоровая, ухоженная, с прекрасным характером. Спасибо за нашего питомца!',
+                text: 'Покупали кошечку породы девон-рекс. Невероятно красивая! Все знакомые восхищаются. Здоровая, ухоженная, с прекрасным характером. Спасибо за нашего питомца!',
                 rating: 5,
                 city: 'Москва, Россия',
                 date: '2024-01-15',
