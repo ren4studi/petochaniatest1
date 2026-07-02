@@ -1445,8 +1445,9 @@
             <div class="alert alert-info" style="margin-bottom: 20px;">
                 <i class="fas fa-info-circle"></i>
                 <strong>Синхронизация данных между устройствами</strong><br>
-                Для синхронизации данных между устройствами настройте GitHub Personal Access Token.
-                Данные будут храниться в приватном GitHub Gist и автоматически синхронизироваться.
+                Настройте GitHub Personal Access Token с правом <code>gist</code>, затем нажмите
+                <strong>«Сохранить настройки синхронизации»</strong> (не только «Проверить соединение»).
+                Данные будут храниться в GitHub Gist и автоматически синхронизироваться на всех устройствах.
             </div>
             
             <form id="syncSettingsForm">
@@ -1454,18 +1455,42 @@
                     <label for="githubToken">GitHub Personal Access Token</label>
                     <input type="password" id="githubToken" class="form-control" 
                            placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" 
+                           autocomplete="off"
                            value="">
+                    <div id="tokenSavedIndicator" class="alert alert-success" style="display: none; margin-top: 10px; padding: 10px 15px;">
+                        <i class="fas fa-check-circle"></i> Токен сохранён в этом браузере.
+                        Оставьте поле пустым, чтобы не менять сохранённый токен.
+                    </div>
                     <small class="text-muted">
-                        Создайте токен на <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings → Developer settings → Personal access tokens</a><br>
-                        Требуемые права: <code>gist</code> (для создания и обновления Gist)
+                        Создайте classic token на <a href="https://github.com/settings/tokens" target="_blank">GitHub → Settings → Developer settings → Personal access tokens</a><br>
+                        Минимум: <code>gist</code>. Опционально <code>repo</code> — для автообновления sync-config.json в репозитории.
                     </small>
                 </div>
                 
-                <div class="form-group" id="gistIdGroup" style="display: none;">
-                    <label for="gistId">Gist ID (опционально)</label>
+                <div class="form-group" id="gistIdGroup">
+                    <label for="gistId">Gist ID данных (опционально)</label>
                     <input type="text" id="gistId" class="form-control" 
-                           placeholder="Оставьте пустым для создания нового Gist">
-                    <small class="text-muted">Если у вас уже есть Gist с данными, укажите его ID</small>
+                           placeholder="Оставьте пустым — будет использован существующий или создан новый">
+                    <small class="text-muted">ID Gist с файлом petochania-data.json. Обычно заполняется автоматически.</small>
+                </div>
+
+                <div class="form-group" id="configGistGroup" style="display: none;">
+                    <label>Config Gist ID (для всех устройств)</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="configGistIdDisplay" class="form-control" readonly>
+                        <button type="button" class="btn btn-secondary" onclick="copyConfigGistId()">
+                            <i class="fas fa-copy"></i> Копировать
+                        </button>
+                    </div>
+                    <small class="text-muted">Этот Gist сообщает всем устройствам, откуда читать данные. Обновляется автоматически при сохранении.</small>
+                </div>
+
+                <div class="form-group" id="syncConfigSnippetGroup" style="display: none;">
+                    <label>sync-config.json для репозитория (если автообновление не сработало)</label>
+                    <textarea id="syncConfigSnippet" class="form-control" rows="6" readonly></textarea>
+                    <button type="button" class="btn btn-secondary" style="margin-top: 10px;" onclick="copySyncConfigSnippet()">
+                        <i class="fas fa-copy"></i> Копировать и вставить в sync-config.json на GitHub
+                    </button>
                 </div>
                 
                 <div class="form-group">
@@ -1488,6 +1513,7 @@
                 <div id="currentSyncStatus">
                     <p><strong>Бекенд:</strong> <span id="backendType">Определяется...</span></p>
                     <p><strong>Gist ID:</strong> <span id="currentGistId">Не настроен</span></p>
+                    <p><strong>Config Gist ID:</strong> <span id="currentConfigGistId">—</span></p>
                     <p><strong>Последняя синхронизация:</strong> <span id="lastSyncTime">-</span></p>
                 </div>
             </div>
@@ -1506,37 +1532,51 @@
 
         // Инициализация бекенда
         async function initBackend() {
-            // Если локальный сервер доступен, используем его
+            window.useExpressDualWrite = false;
+
+            if (window.githubSyncBackend) {
+                await window.githubSyncBackend.init();
+            }
+
+            const gistConfigured = !!(window.githubSyncBackend && window.githubSyncBackend.initialized);
+            const hasGithubToken = !!localStorage.getItem('petochania_github_token');
+
+            // GitHub Gist — основной бекенд для синхронизации между устройствами
+            if (gistConfigured) {
+                backend = window.githubSyncBackend;
+                console.log('✅ Используется GitHub Sync Backend');
+
+                if (USE_LOCAL_API && hasGithubToken) {
+                    try {
+                        const testResponse = await fetch(`${API_BASE}/cats`, { method: 'GET' });
+                        if (testResponse.ok || testResponse.status === 401) {
+                            window.useExpressDualWrite = true;
+                            console.log('ℹ️ Дополнительно: дублирование в локальный Express');
+                        }
+                    } catch (error) {
+                        console.warn('Локальный Express недоступен для дублирования');
+                    }
+                }
+                return;
+            }
+
+            // Локальный Express — только если Gist не настроен
             if (USE_LOCAL_API) {
                 try {
                     const testResponse = await fetch(`${API_BASE}/cats`, { method: 'GET' });
                     if (testResponse.ok || testResponse.status === 401) {
-                        // Сервер доступен, используем Express API
-                        console.log('✅ Используется локальный Express API');
+                        console.log('✅ Используется локальный Express API (Gist не настроен)');
                         backend = 'express';
                         return;
                     }
                 } catch (error) {
-                    console.warn('Локальный сервер недоступен, переключаемся на облачный бекенд');
+                    console.warn('Локальный сервер недоступен, переключаемся на localStorage');
                 }
             }
 
-            // Приоритет 1: GitHub Sync Backend (для синхронизации между устройствами)
-            if (window.githubSyncBackend && window.githubSyncBackend.initialized) {
-                backend = window.githubSyncBackend;
-                console.log('✅ Используется GitHub Sync Backend');
-                return;
-            }
-
-            // Используем GitHub Sync Backend (полностью бесплатный)
             if (window.githubSyncBackend) {
                 backend = window.githubSyncBackend;
-                await backend.init();
-                if (backend.initialized) {
-                    console.log('✅ Используется GitHub Sync Backend (бесплатный)');
-                } else {
-                    console.log('⚠️ GitHub Sync Backend не настроен. Используется localStorage (только локально)');
-                }
+                console.log('⚠️ GitHub Sync Backend не настроен. Используется localStorage (только локально)');
                 return;
             }
 
@@ -2961,6 +3001,8 @@
                     detail: { source: 'admin-panel', timestamp: new Date().toISOString() }
                 });
                 window.dispatchEvent(updateEvent);
+
+                await pushToGistIfConfigured();
                 
                 return catData;
             } catch (error) {
@@ -2978,6 +3020,7 @@
                 if (index !== -1) {
                     cats[index] = { ...cats[index], ...catData };
                     localStorage.setItem('petochania_cats', JSON.stringify(cats));
+                    await pushToGistIfConfigured();
                     return cats[index];
                 } else {
                     throw new Error('Кошка не найдена');
@@ -3008,6 +3051,8 @@
                     detail: { source: 'admin-delete', timestamp: new Date().toISOString() }
                 });
                 window.dispatchEvent(updateEvent);
+
+                await pushToGistIfConfigured();
                 
                 return true;
             } catch (error) {
@@ -3086,6 +3131,8 @@
                     detail: { source: 'admin-panel' }
                 });
                 window.dispatchEvent(updateEvent);
+
+                await pushToGistIfConfigured();
                 
                 showMessage('Страница породы успешно обновлена!', 'success');
                 
@@ -4043,6 +4090,7 @@ async function saveFaqToStorage(faqData) {
         }
         
         localStorage.setItem('petochania_faq', JSON.stringify(faqs));
+        await pushToGistIfConfigured();
         return faqData;
     } catch (error) {
         console.error('Error saving FAQ to storage:', error);
@@ -4146,6 +4194,7 @@ async function deleteFaq(faqId) {
         const filteredFaqs = faqs.filter(f => f.id !== faqId);
         
         localStorage.setItem('petochania_faq', JSON.stringify(filteredFaqs));
+        await pushToGistIfConfigured();
         
         showMessage('Вопрос удален!', 'success');
         
@@ -4418,6 +4467,7 @@ async function saveReviewToStorage(reviewData) {
         }
         
         localStorage.setItem('petochania_reviews', JSON.stringify(reviews));
+        await pushToGistIfConfigured();
         return reviewData;
     } catch (error) {
         console.error('Error saving review to storage:', error);
@@ -4573,6 +4623,7 @@ async function deleteReview(reviewId) {
         const filteredReviews = reviews.filter(r => r.id !== reviewId);
         
         localStorage.setItem('petochania_reviews', JSON.stringify(filteredReviews));
+        await pushToGistIfConfigured();
         
         showMessage('Отзыв удален!', 'success');
         
@@ -4934,6 +4985,7 @@ async function saveVideoToStorage(videoData) {
         }
         
         localStorage.setItem('petochania_videos', JSON.stringify(videos));
+        await pushToGistIfConfigured();
         return videoData;
     } catch (error) {
         console.error('Error saving video to storage:', error);
@@ -5107,6 +5159,7 @@ async function deleteVideo(videoId) {
         const filteredVideos = videos.filter(v => v.id !== videoId);
         
         localStorage.setItem('petochania_videos', JSON.stringify(filteredVideos));
+        await pushToGistIfConfigured();
         
         showMessage('Видео удалено!', 'success');
         
@@ -5254,98 +5307,154 @@ function initSettingsManagement() {
 
     // Загрузка текущих настроек синхронизации
     async function loadSyncSettings() {
-        // Ждем загрузки sync-config если доступен
         if (window.syncConfigLoader) {
-            await window.syncConfigLoader.loadConfig();
+            await window.syncConfigLoader.loadConfig(true);
         }
-        
-        const token = localStorage.getItem('petochania_github_token');
-        // Пробуем получить Gist ID из разных источников
+
+        if (window.githubSyncBackend) {
+            await window.githubSyncBackend.init();
+        }
+
+        const tokenSaved = window.githubSyncBackend?.isTokenSaved?.() ||
+            localStorage.getItem('petochania_github_token_saved') === 'true';
+        const tokenIndicator = document.getElementById('tokenSavedIndicator');
+        const tokenInput = document.getElementById('githubToken');
+
+        if (tokenSaved && tokenIndicator) {
+            tokenIndicator.style.display = 'block';
+            if (tokenInput) {
+                tokenInput.placeholder = '•••••••••••••••••••• (токен сохранён)';
+                tokenInput.value = '';
+            }
+        } else if (tokenIndicator) {
+            tokenIndicator.style.display = 'none';
+        }
+
         let gistId = localStorage.getItem('petochania_gist_id');
         if (!gistId && window.syncConfigLoader) {
             gistId = window.syncConfigLoader.getGistId();
         }
-        if (!gistId && window.githubSyncBackend && window.githubSyncBackend.gistId) {
+        if (!gistId && window.githubSyncBackend) {
             gistId = window.githubSyncBackend.gistId;
         }
-        
-        if (token) {
-            const tokenInput = document.getElementById('githubToken');
-            if (tokenInput) {
-                tokenInput.value = token;
-                const gistIdGroup = document.getElementById('gistIdGroup');
-                if (gistIdGroup) {
-                    gistIdGroup.style.display = 'block';
-                }
-            }
+
+        const gistIdInput = document.getElementById('gistId');
+        if (gistIdInput && gistId) {
+            gistIdInput.value = gistId;
+            localStorage.setItem('petochania_gist_id', gistId);
         }
-        if (gistId) {
-            const gistIdInput = document.getElementById('gistId');
-            if (gistIdInput) {
-                gistIdInput.value = gistId;
-                // Сохраняем в localStorage для быстрого доступа
-                localStorage.setItem('petochania_gist_id', gistId);
-            }
-        }
-        
+
+        const configGistId = localStorage.getItem('petochania_config_gist_id') ||
+            window.syncConfigLoader?.getConfigGistId?.() ||
+            window.githubSyncBackend?.configGistId;
+
+        updateSyncConfigUI(gistId, configGistId);
         updateSyncStatus();
+    }
+
+    function updateSyncConfigUI(gistId, configGistId) {
+        const configGistGroup = document.getElementById('configGistGroup');
+        const configGistDisplay = document.getElementById('configGistIdDisplay');
+        const snippetGroup = document.getElementById('syncConfigSnippetGroup');
+        const snippetField = document.getElementById('syncConfigSnippet');
+
+        if (configGistId && configGistGroup && configGistDisplay) {
+            configGistGroup.style.display = 'block';
+            configGistDisplay.value = configGistId;
+        }
+
+        if (gistId && snippetField && window.githubSyncBackend) {
+            const snippet = window.githubSyncBackend.getSyncConfigSnippet(configGistId, gistId);
+            snippetField.value = snippet;
+            if (snippetGroup) {
+                snippetGroup.style.display = 'block';
+            }
+        }
+    }
+
+    function copyConfigGistId() {
+        const value = document.getElementById('configGistIdDisplay')?.value;
+        if (value) {
+            navigator.clipboard.writeText(value);
+            showMessage('Config Gist ID скопирован', 'success');
+        }
+    }
+
+    function copySyncConfigSnippet() {
+        const value = document.getElementById('syncConfigSnippet')?.value;
+        if (value) {
+            navigator.clipboard.writeText(value);
+            showMessage('sync-config.json скопирован — вставьте в репозиторий на GitHub', 'success');
+        }
     }
 
     // Сохранение настроек синхронизации
     async function saveSyncSettings() {
-        const token = document.getElementById('githubToken').value.trim();
+        const tokenInput = document.getElementById('githubToken').value.trim();
+        const savedToken = localStorage.getItem('petochania_github_token');
+        const token = tokenInput || savedToken;
         const gistId = document.getElementById('gistId').value.trim();
-        
+
         const submitText = document.getElementById('syncSubmitText');
         const submitLoading = document.getElementById('syncSubmitLoading');
         const statusDiv = document.getElementById('syncStatus');
-        
+
         try {
             submitText.style.display = 'none';
             showLoading(submitLoading);
             statusDiv.style.display = 'none';
-            
+
             if (!token) {
                 throw new Error('Введите GitHub Personal Access Token');
             }
-            
+
             if (!window.githubSyncBackend) {
                 throw new Error('GitHub Sync Backend не загружен');
             }
-            
+
             const result = await window.githubSyncBackend.setup(token, gistId || null);
-            
-            // Обновляем конфигурационный файл для всех пользователей
+
             if (result.gistId) {
-                await updateSyncConfigFile(result.gistId);
-                // Сохраняем Gist ID в localStorage для надежности
                 localStorage.setItem('petochania_gist_id', result.gistId);
             }
-            
-            // Переинициализируем бекенд
-            // Сбрасываем флаг initialized чтобы принудительно переинициализировать
+            if (result.configGistId) {
+                localStorage.setItem('petochania_config_gist_id', result.configGistId);
+            }
+
+            const repoUpdated = await updateSyncConfigFile(result.gistId, result.configGistId);
+
             if (window.githubSyncBackend) {
-                window.githubSyncBackend.initialized = false;
+                window.githubSyncBackend.initialized = true;
+                window.githubSyncBackend.gistId = result.gistId;
+                window.githubSyncBackend.configGistId = result.configGistId;
             }
+
+            if (window.syncConfigLoader) {
+                window.syncConfigLoader.gistId = result.gistId;
+                window.syncConfigLoader.configGistId = result.configGistId;
+            }
+
             await initBackend();
-            
-            // Обновляем форму настроек с новым Gist ID
             await loadSyncSettings();
-            
-            // Проверяем, что backend правильно инициализирован
-            if (backend && typeof backend === 'object' && backend.initialized) {
-                console.log('✅ Backend успешно переинициализирован с Gist ID:', backend.gistId);
+
+            let successMessage = `<i class="fas fa-check-circle"></i> Синхронизация настроена!<br>
+                <small>Data Gist ID: ${result.gistId}</small><br>
+                <small>Config Gist ID: ${result.configGistId || '—'}</small>`;
+
+            if (!repoUpdated) {
+                successMessage += `<br><small>⚠️ sync-config.json в репозитории не обновлён автоматически.
+                Скопируйте блок ниже и закоммитьте на GitHub (или добавьте право <code>repo</code> к токену).</small>`;
             } else {
-                console.warn('⚠️ Backend не был правильно инициализирован после сохранения настроек');
+                successMessage += `<br><small>✅ sync-config.json в репозитории обновлён — все устройства получат изменения.</small>`;
             }
-            
+
             statusDiv.className = 'alert alert-success';
-            statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Настройки синхронизации сохранены успешно!<br><small>Gist ID: ' + result.gistId + '</small><br><small>Gist ID автоматически доступен всем пользователям</small>';
+            statusDiv.innerHTML = successMessage;
             statusDiv.style.display = 'block';
-            
+
             updateSyncStatus();
-            showMessage('Настройки синхронизации сохранены. Gist ID: ' + result.gistId, 'success');
-            
+            showMessage('Синхронизация настроена успешно', 'success');
+
         } catch (error) {
             console.error('Error saving sync settings:', error);
             statusDiv.className = 'alert alert-danger';
@@ -5360,39 +5469,47 @@ function initSettingsManagement() {
 
     // Тестирование соединения
     async function testSyncConnection() {
-        const token = document.getElementById('githubToken').value.trim();
+        const tokenInput = document.getElementById('githubToken').value.trim();
+        const savedToken = localStorage.getItem('petochania_github_token');
+        const token = tokenInput || savedToken;
         const statusDiv = document.getElementById('syncStatus');
-        
+
         if (!token) {
             statusDiv.className = 'alert alert-warning';
             statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Введите GitHub токен для проверки';
             statusDiv.style.display = 'block';
             return;
         }
-        
+
         try {
             statusDiv.className = 'alert alert-info';
             statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка соединения...';
             statusDiv.style.display = 'block';
-            
-            // Проверяем токен через API
-            const response = await fetch('https://api.github.com/user', {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            
+
+            const authHeaders = window.githubSyncBackend
+                ? GitHubSyncBackend.getAuthHeaders(token)
+                : { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' };
+
+            const response = await fetch('https://api.github.com/user', { headers: authHeaders });
+
             if (!response.ok) {
                 throw new Error('Неверный токен или недостаточно прав');
             }
-            
+
             const user = await response.json();
-            
+
+            if (tokenInput) {
+                window.githubSyncBackend?.saveToken(token);
+                document.getElementById('tokenSavedIndicator').style.display = 'block';
+                document.getElementById('githubToken').value = '';
+                document.getElementById('githubToken').placeholder = '•••••••••••••••••••• (токен сохранён)';
+            }
+
             statusDiv.className = 'alert alert-success';
-            statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> Соединение успешно! Пользователь: ${user.login}`;
+            statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> Соединение успешно! Пользователь: ${user.login}<br>
+                <small>Нажмите «Сохранить настройки синхронизации», чтобы завершить настройку Gist.</small>`;
             statusDiv.style.display = 'block';
-            
+
         } catch (error) {
             console.error('Error testing connection:', error);
             statusDiv.className = 'alert alert-danger';
@@ -5406,89 +5523,98 @@ function initSettingsManagement() {
         const backendTypeEl = document.getElementById('backendType');
         const gistIdEl = document.getElementById('currentGistId');
         const lastSyncEl = document.getElementById('lastSyncTime');
-        
-        if (backend === 'express') {
-            backendTypeEl.textContent = 'Локальный Express API';
-        } else if (backend && backend.initialized && window.githubSyncBackend && backend === window.githubSyncBackend) {
-            backendTypeEl.textContent = 'GitHub Sync Backend (бесплатный)';
+
+        if (!backendTypeEl) return;
+
+        if (backend === 'express' && !window.githubSyncBackend?.initialized) {
+            backendTypeEl.textContent = 'Локальный Express API (без Gist)';
+        } else if (window.githubSyncBackend?.initialized) {
+            backendTypeEl.textContent = 'GitHub Gist Sync ✅';
             const gistId = localStorage.getItem('petochania_gist_id') || window.syncConfigLoader?.getGistId();
             gistIdEl.textContent = gistId || 'Не настроен';
+
+            const configGistId = localStorage.getItem('petochania_config_gist_id');
+            const configGistEl = document.getElementById('currentConfigGistId');
+            if (configGistEl) {
+                configGistEl.textContent = configGistId || '—';
+            }
         } else {
-            backendTypeEl.textContent = 'localStorage (только локально)';
+            backendTypeEl.textContent = 'localStorage (только локально) ⚠️';
+            gistIdEl.textContent = 'Не настроен';
         }
-        
+
         const lastSync = localStorage.getItem('petochania_last_sync');
         if (lastSync) {
-            const date = new Date(lastSync);
-            lastSyncEl.textContent = date.toLocaleString('ru-RU');
+            lastSyncEl.textContent = new Date(lastSync).toLocaleString('ru-RU');
         } else {
             lastSyncEl.textContent = 'Никогда';
         }
     }
 
-    // Обновление конфигурационного файла для всех пользователей
-    async function updateSyncConfigFile(gistId) {
-        // Пытаемся обновить файл sync-config.json в репозитории через GitHub API
-        // Это требует токен с правами на репозиторий
+    function utf8ToBase64(str) {
+        return btoa(unescape(encodeURIComponent(str)));
+    }
+
+    // Обновление sync-config.json в репозитории (нужно право repo)
+    async function updateSyncConfigFile(gistId, configGistId) {
         const token = localStorage.getItem('petochania_github_token');
-        if (!token) {
-            console.warn('Токен не найден, конфигурационный файл не будет обновлен');
-            return;
+        if (!token || !gistId) {
+            return false;
+        }
+
+        const repoInfo = getRepoInfoFromUrl();
+        if (!repoInfo) {
+            console.warn('Не GitHub Pages — sync-config.json нужно обновить вручную');
+            return false;
         }
 
         try {
-            // Получаем информацию о репозитории из URL
-            const repoInfo = getRepoInfoFromUrl();
-            if (!repoInfo) {
-                console.warn('Не удалось определить репозиторий из URL');
-                return;
-            }
-
-            // Получаем текущий файл
             const fileUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/contents/sync-config.json`;
-            const fileResponse = await fetch(fileUrl, {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
+            const authHeaders = GitHubSyncBackend.getAuthHeaders(token);
+
+            const fileResponse = await fetch(fileUrl, { headers: authHeaders });
 
             let sha = null;
             if (fileResponse.ok) {
                 const fileData = await fileResponse.json();
                 sha = fileData.sha;
+            } else if (fileResponse.status === 404) {
+                // Файл ещё не существует — создадим
+            } else if (fileResponse.status === 403 || fileResponse.status === 401) {
+                console.warn('Нет прав repo для автообновления sync-config.json');
+                return false;
             }
 
-            // Обновляем файл
             const configContent = {
                 gistId: gistId,
+                configGistId: configGistId || localStorage.getItem('petochania_config_gist_id') || '',
                 lastUpdated: new Date().toISOString()
             };
 
             const updateResponse = await fetch(fileUrl, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `token ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/vnd.github.v3+json'
+                    ...authHeaders,
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    message: 'Update sync config: Gist ID',
-                    content: btoa(JSON.stringify(configContent, null, 2)),
+                    message: 'Update sync config: Gist IDs',
+                    content: utf8ToBase64(JSON.stringify(configContent, null, 2)),
                     sha: sha
                 })
             });
 
             if (updateResponse.ok) {
-                console.log('✅ Конфигурационный файл обновлен для всех пользователей');
-            } else {
-                const error = await updateResponse.json();
-                console.warn('Не удалось обновить конфигурационный файл:', error.message);
-                // Это не критично - Gist ID уже сохранен в localStorage
+                console.log('✅ sync-config.json обновлён в репозитории');
+                return true;
             }
+
+            const error = await updateResponse.json().catch(() => ({}));
+            console.warn('Не удалось обновить sync-config.json:', error.message || updateResponse.status);
+            return false;
         } catch (error) {
-            console.warn('Ошибка обновления конфигурационного файла:', error);
-            // Это не критично - Gist ID уже сохранен в localStorage
+            console.warn('Ошибка обновления sync-config.json:', error);
+            return false;
         }
     }
 
@@ -5559,6 +5685,10 @@ function initSettingsManagement() {
         document.getElementById('metaDescriptionCounter').textContent = 
             `${this.value.length}/160`;
     });
+
+    window.testSyncConnection = testSyncConnection;
+    window.copyConfigGistId = copyConfigGistId;
+    window.copySyncConfigSnippet = copySyncConfigSnippet;
 
     loadSettings();
 }
@@ -5705,6 +5835,7 @@ async function saveSiteSettings() {
         }
         
         localStorage.setItem('petochania_site_settings', JSON.stringify(siteSettings));
+        await pushToGistIfConfigured();
         
         showMessage('Настройки сайта сохранены!', 'success');
         
@@ -5739,6 +5870,7 @@ async function saveSocialSettings() {
         });
         
         localStorage.setItem('petochania_social_settings', JSON.stringify(socialLinks));
+        await pushToGistIfConfigured();
         
         showMessage('Настройки социальных сетей сохранены!', 'success');
         
@@ -5768,6 +5900,7 @@ async function saveSeoSettings() {
         };
         
         localStorage.setItem('petochania_seo_settings', JSON.stringify(seoSettings));
+        await pushToGistIfConfigured();
         
         showMessage('SEO настройки сохранены!', 'success');
         
