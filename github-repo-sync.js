@@ -8,7 +8,7 @@ class GitHubRepoSync {
     constructor() {
         this.owner = null;
         this.repo = null;
-        this.branch = 'main';
+        this.branch = 'master';
         this.dataFile = PETOCHANIA_SITE_DATA_FILE;
         this.githubToken = null;
         this.initialized = false;
