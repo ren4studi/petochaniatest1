@@ -1,0 +1,77 @@
+{
+  "breedPages": {
+    "devon": {
+      "title": "Девон-рекс",
+      "heroDescription": "Энергичные и любвеобильные кошки с инопланетной внешностью и собачьим характером",
+      "description": "Девон-рекс — порода домашних кошек, появившаяся в Великобритании в 1960-х годах. Эти кошки отличаются уникальной волнистой шерстью, большими ушами и выразительными глазами. Девон-рексы очень социальные и преданные кошки, которые любят быть в центре внимания.",
+      "origin": "Великобритания",
+      "weight": "3-4.5 кг",
+      "lifespan": "9-15 лет",
+      "temperament": "Активный, игривый",
+      "characteristics": [
+        "Ласковый",
+        "Игривый",
+        "Умный",
+        "Общительный",
+        "Энергичный"
+      ],
+      "lastUpdated": "2024-01-15T10:30:00.000Z"
+    }
+  },
+  "cats": [
+    {
+      "id": "1",
+      "name": "Лучик",
+      "breed": "Девон-рекс",
+      "gender": "Девочка",
+      "status": "ДОСТУПЕН",
+      "color": "голубой",
+      "age": "3",
+      "price": "50000",
+      "images": [],
+      "description": "",
+      "characteristics": "",
+      "parents": "",
+      "litter": "ПОМЕТ Т от 02/03/2025",
+      "createdAt": "2024-01-15T10:30:00.000Z",
+      "updatedAt": "2024-01-15T10:30:00.000Z"
+    }
+  ],
+  "gallery": [],
+  "faq": [],
+  "reviews": [],
+  "videos": [],
+  "settings": {
+    "siteTitle": "Petochania",
+    "siteDescription": "Питомник элитных кошек",
+    "contactPhone": "8 926 150 2870",
+    "contactEmail": "",
+    "socialLinks": [
+      {
+        "name": "Telegram",
+        "url": "https://t.me/tata_procats"
+      },
+      {
+        "name": "WhatsApp",
+        "url": "https://wa.me/message/Y4ZYRHELPNHUE1"
+      },
+      {
+        "name": "VK",
+        "url": "https://vk.com/petochania"
+      },
+      {
+        "name": "Facebook",
+        "url": "https://www.facebook.com/share/1A33qj8Nbm/?mibextid=wwXIfr"
+      },
+      {
+        "name": "TikTok",
+        "url": "https://www.tiktok.com/@tata.vygodnaya?_t=ZS-90PLbDoj2kE&_r=1"
+      },
+      {
+        "name": "Instagram",
+        "url": "https://www.instagram.com/petochania?igsh=MWR3bHhpNjhnd3g3dw%3D%3D&utm_source=qr"
+      }
+    ]
+  },
+  "lastSync": "2026-07-05T14:00:00.000Z"
+}

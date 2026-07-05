@@ -21,49 +21,28 @@ class DataSync {
     async loadInitialData() {
         console.log('Загрузка начальных данных...');
         
-        // Пытаемся загрузить данные из GitHub Gist, если настроен
-        // Проверяем наличие Gist ID (для публичного Gist токен не нужен)
-        // Сначала пробуем загрузить из sync-config.json (для всех пользователей)
-        let gistId = null;
-        if (window.syncConfigLoader) {
-            gistId = window.syncConfigLoader.getGistId();
-        }
-        // Fallback: из localStorage
-        if (!gistId) {
-            gistId = localStorage.getItem('petochania_gist_id');
-        }
-        
-        if (window.githubSyncBackend && gistId) {
+        // Загрузка данных из site-data.json в GitHub репозитории
+        const repoSync = window.githubRepoSync || window.githubSyncBackend;
+        if (repoSync) {
             try {
-                console.log('Попытка загрузки данных из GitHub Gist...');
-                const gistData = await window.githubSyncBackend.loadData();
-                if (gistData && Object.keys(gistData).length > 0) {
-                    console.log('✅ Данные загружены из GitHub Gist');
-                    // Синхронизируем данные из Gist в localStorage
-                    if (gistData.cats) {
-                        localStorage.setItem(this.CATS_KEY, JSON.stringify(gistData.cats));
+                await repoSync.init();
+                if (repoSync.initialized) {
+                    console.log('Попытка загрузки данных из site-data.json...');
+                    const remoteData = await repoSync.loadData();
+                    if (remoteData && Object.keys(remoteData).length > 0) {
+                        console.log('✅ Данные загружены из GitHub репозитория');
+                        if (typeof repoSync.applyDataToLocalStorage === 'function') {
+                            repoSync.applyDataToLocalStorage(remoteData);
+                        } else {
+                            if (remoteData.cats) localStorage.setItem(this.CATS_KEY, JSON.stringify(remoteData.cats));
+                            if (remoteData.breedPages) localStorage.setItem(this.BREED_PAGES_KEY, JSON.stringify(remoteData.breedPages));
+                            if (remoteData.settings) localStorage.setItem(this.SETTINGS_KEY, JSON.stringify(remoteData.settings));
+                        }
+                        return;
                     }
-                    if (gistData.breedPages) {
-                        localStorage.setItem(this.BREED_PAGES_KEY, JSON.stringify(gistData.breedPages));
-                    }
-                    if (gistData.settings) {
-                        localStorage.setItem(this.SETTINGS_KEY, JSON.stringify(gistData.settings));
-                    }
-                    if (gistData.faq) {
-                        localStorage.setItem('petochania_faq', JSON.stringify(gistData.faq));
-                    }
-                    if (gistData.reviews) {
-                        localStorage.setItem('petochania_reviews', JSON.stringify(gistData.reviews));
-                    }
-                    if (gistData.videos) {
-                        localStorage.setItem('petochania_videos', JSON.stringify(gistData.videos));
-                    }
-                    // Обновляем время последней синхронизации
-                    localStorage.setItem('petochania_last_sync', new Date().toISOString());
-                    return;
                 }
             } catch (error) {
-                console.warn('Не удалось загрузить данные из GitHub Gist:', error);
+                console.warn('Не удалось загрузить site-data.json:', error);
             }
         }
         

@@ -1,17 +1,17 @@
-// Загрузка конфигурации синхронизации для всех пользователей сайта
-
-const PETOCHANIA_CONFIG_FILENAME = 'petochania-sync-config.json';
+// Загрузка конфигурации синхронизации (owner/repo/branch) для всех страниц сайта
 
 class SyncConfigLoader {
     constructor() {
         this.configUrl = 'sync-config.json';
-        this.gistId = null;
-        this.configGistId = null;
+        this.owner = null;
+        this.repo = null;
+        this.branch = 'main';
+        this.dataFile = 'site-data.json';
         this.lastUpdated = null;
         this.loadPromise = null;
     }
 
-    async loadConfig(force = false) {
+    async loadConfig(force) {
         if (this.loadPromise && !force) {
             return this.loadPromise;
         }
@@ -20,103 +20,55 @@ class SyncConfigLoader {
     }
 
     async _loadConfigInternal() {
-        let fileConfig = {};
-
         try {
-            const response = await fetch(`${this.configUrl}?t=${Date.now()}`);
+            const response = await fetch(this.configUrl + '?t=' + Date.now());
             if (response.ok) {
-                fileConfig = await response.json();
+                const fileConfig = await response.json();
+                this.owner = fileConfig.githubOwner || fileConfig.owner || null;
+                this.repo = fileConfig.githubRepo || fileConfig.repo || null;
+                this.branch = fileConfig.githubBranch || fileConfig.branch || 'main';
+                this.dataFile = fileConfig.dataFile || 'site-data.json';
+                this.lastUpdated = fileConfig.lastUpdated || null;
+
+                if (this.owner) localStorage.setItem('petochania_github_owner', this.owner);
+                if (this.repo) localStorage.setItem('petochania_github_repo', this.repo);
+                if (this.branch) localStorage.setItem('petochania_github_branch', this.branch);
+                if (this.dataFile) localStorage.setItem('petochania_data_file', this.dataFile);
+
+                console.log('✅ sync-config.json: ' + (this.owner || '?') + '/' + (this.repo || '?'));
             }
         } catch (error) {
             console.warn('Не удалось загрузить sync-config.json:', error);
         }
 
-        if (fileConfig.configGistId) {
-            this.configGistId = fileConfig.configGistId;
-            localStorage.setItem('petochania_config_gist_id', fileConfig.configGistId);
-        } else {
-            this.configGistId = localStorage.getItem('petochania_config_gist_id');
+        this.owner = this.owner || localStorage.getItem('petochania_github_owner');
+        this.repo = this.repo || localStorage.getItem('petochania_github_repo');
+        this.branch = localStorage.getItem('petochania_github_branch') || this.branch || 'main';
+        this.dataFile = localStorage.getItem('petochania_data_file') || this.dataFile || 'site-data.json';
+
+        if (!this.owner || !this.repo) {
+            console.warn('⚠️ Репозиторий не настроен. Настройте синхронизацию в админ-панели.');
         }
 
-        let resolvedGistId = null;
-        let resolvedUpdated = null;
-
-        // 1. Config Gist — актуальный ID для всех устройств (обновляется через gist-токен)
-        if (this.configGistId) {
-            const liveConfig = await this.fetchConfigFromGist(this.configGistId);
-            if (liveConfig?.gistId) {
-                resolvedGistId = liveConfig.gistId;
-                resolvedUpdated = liveConfig.lastUpdated || null;
-                console.log('✅ Gist ID загружен из Config Gist:', resolvedGistId);
-            }
-        }
-
-        // 2. sync-config.json в репозитории
-        if (fileConfig.gistId) {
-            const fileUpdated = fileConfig.lastUpdated ? new Date(fileConfig.lastUpdated).getTime() : 0;
-            const liveUpdated = resolvedUpdated ? new Date(resolvedUpdated).getTime() : 0;
-
-            if (!resolvedGistId || fileUpdated > liveUpdated) {
-                resolvedGistId = fileConfig.gistId;
-                resolvedUpdated = fileConfig.lastUpdated || null;
-                console.log('✅ Gist ID загружен из sync-config.json:', resolvedGistId);
-            }
-        }
-
-        // 3. localStorage (устройство администратора)
-        const localGistId = localStorage.getItem('petochania_gist_id');
-        const localUpdated = localStorage.getItem('petochania_gist_id_updated');
-        if (localGistId && localStorage.getItem('petochania_github_token')) {
-            const localTime = localUpdated ? new Date(localUpdated).getTime() : 0;
-            const resolvedTime = resolvedUpdated ? new Date(resolvedUpdated).getTime() : 0;
-            if (!resolvedGistId || localTime > resolvedTime) {
-                resolvedGistId = localGistId;
-                resolvedUpdated = localUpdated;
-            }
-        }
-
-        if (resolvedGistId) {
-            this.gistId = resolvedGistId;
-            this.lastUpdated = resolvedUpdated;
-            localStorage.setItem('petochania_gist_id', resolvedGistId);
-        }
-
-        if (!this.gistId) {
-            console.warn('⚠️ Gist ID не найден. Настройте синхронизацию в админ-панели.');
-        }
-
-        return this.gistId;
+        return this.getRepoConfig();
     }
 
-    async fetchConfigFromGist(configGistId) {
-        try {
-            const response = await fetch(`https://api.github.com/gists/${configGistId}`, {
-                headers: { 'Accept': 'application/vnd.github.v3+json' }
-            });
-
-            if (!response.ok) {
-                console.warn('Config Gist недоступен:', response.status);
-                return null;
-            }
-
-            const gist = await response.json();
-            const file = gist.files[PETOCHANIA_CONFIG_FILENAME] ||
-                gist.files[Object.keys(gist.files)[0]];
-
-            if (!file?.content) return null;
-            return JSON.parse(file.content);
-        } catch (error) {
-            console.warn('Ошибка чтения Config Gist:', error);
-            return null;
-        }
+    getRepoConfig() {
+        return {
+            owner: this.owner || localStorage.getItem('petochania_github_owner'),
+            repo: this.repo || localStorage.getItem('petochania_github_repo'),
+            branch: this.branch || localStorage.getItem('petochania_github_branch') || 'main',
+            dataFile: this.dataFile || localStorage.getItem('petochania_data_file') || 'site-data.json'
+        };
     }
 
+    // Совместимость со старым кодом (Gist больше не используется)
     getGistId() {
-        return this.gistId || localStorage.getItem('petochania_gist_id');
+        return null;
     }
 
     getConfigGistId() {
-        return this.configGistId || localStorage.getItem('petochania_config_gist_id');
+        return null;
     }
 }
 
