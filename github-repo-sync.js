@@ -13,6 +13,7 @@ class GitHubRepoSync {
         this.githubToken = null;
         this.initialized = false;
         this.fileSha = null;
+        this._saveQueue = Promise.resolve();
         this.init();
     }
 
@@ -152,17 +153,38 @@ class GitHubRepoSync {
         throw new Error(error.message || 'Ошибка чтения файла (HTTP ' + response.status + ')');
     }
 
-    async saveData(data) {
-        if (!this.hasWriteAccess()) {
-            return { success: true, localOnly: true };
-        }
+    isShaConflictError(message) {
+        if (!message) return false;
+        const text = String(message).toLowerCase();
+        return text.includes('does not match') ||
+            text.includes('sha') && text.includes('match') ||
+            text.includes('409');
+    }
 
-        const payload = Object.assign({}, data, { lastSync: new Date().toISOString() });
+    mergeWithRemote(remote, local) {
+        if (!remote) return local;
+        return {
+            cats: Array.isArray(local.cats) ? local.cats : (remote.cats || []),
+            breedPages: Object.assign({}, remote.breedPages || {}, local.breedPages || {}),
+            faq: Array.isArray(local.faq) ? local.faq : (remote.faq || []),
+            reviews: Array.isArray(local.reviews) ? local.reviews : (remote.reviews || []),
+            videos: Array.isArray(local.videos) ? local.videos : (remote.videos || []),
+            gallery: Array.isArray(local.gallery) ? local.gallery : (remote.gallery || []),
+            settings: Object.assign({}, remote.settings || {}, local.settings || {})
+        };
+    }
+
+    async putSiteDataFile(payload, sha) {
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
-        const sha = await this.getFileSha();
-
         const apiUrl = 'https://api.github.com/repos/' + this.owner + '/' + this.repo + '/contents/' +
             encodeURIComponent(this.dataFile);
+
+        const body = {
+            message: 'Update site data from Petochania admin panel',
+            content: content,
+            branch: this.branch
+        };
+        if (sha) body.sha = sha;
 
         const response = await fetch(apiUrl, {
             method: 'PUT',
@@ -170,21 +192,65 @@ class GitHubRepoSync {
                 { 'Content-Type': 'application/json' },
                 GitHubRepoSync.getAuthHeaders(this.githubToken)
             ),
-            body: JSON.stringify({
-                message: 'Update site data from Petochania admin panel',
-                content: content,
-                branch: this.branch,
-                sha: sha || undefined
-            })
+            body: JSON.stringify(body)
         });
 
         if (!response.ok) {
             const error = await response.json().catch(function() { return {}; });
-            throw new Error(error.message || 'Ошибка сохранения в репозиторий (HTTP ' + response.status + ')');
+            const err = new Error(error.message || 'Ошибка сохранения в репозиторий (HTTP ' + response.status + ')');
+            err.status = response.status;
+            throw err;
         }
 
-        localStorage.setItem('petochania_last_sync', payload.lastSync);
-        return { success: true };
+        const result = await response.json();
+        if (result.content && result.content.sha) {
+            this.fileSha = result.content.sha;
+        }
+        return result;
+    }
+
+    async saveDataOnce(data) {
+        const remote = await this.loadData();
+        const merged = this.mergeWithRemote(remote, data);
+        const payload = Object.assign({}, merged, { lastSync: new Date().toISOString() });
+
+        const maxAttempts = 3;
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const sha = await this.getFileSha();
+            try {
+                await this.putSiteDataFile(payload, sha);
+                localStorage.setItem('petochania_last_sync', payload.lastSync);
+                return { success: true };
+            } catch (error) {
+                lastError = error;
+                if (attempt < maxAttempts && (error.status === 409 || this.isShaConflictError(error.message))) {
+                    console.warn('Конфликт версии site-data.json, повтор ' + (attempt + 1) + '/' + maxAttempts);
+                    await new Promise(function(resolve) { setTimeout(resolve, 400 * attempt); });
+                    continue;
+                }
+                throw error;
+            }
+        }
+
+        throw lastError || new Error('Не удалось сохранить site-data.json');
+    }
+
+    async saveData(data) {
+        if (!this.hasWriteAccess()) {
+            return { success: true, localOnly: true };
+        }
+
+        const self = this;
+        this._saveQueue = this._saveQueue.then(function() {
+            return self.saveDataOnce(data);
+        }).catch(function(error) {
+            console.error('Ошибка очереди сохранения:', error);
+            throw error;
+        });
+
+        return this._saveQueue;
     }
 
     async syncFromLocalStorage() {
