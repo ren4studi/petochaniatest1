@@ -1,23 +1,5 @@
 {
-  "cats": [
-    {
-      "name": "1123",
-      "breed": "Девон-рекс",
-      "gender": "Мальчик",
-      "status": "ДОСТУПЕН",
-      "color": "123",
-      "age": "12",
-      "price": "12",
-      "litter": "123",
-      "parents": "23",
-      "description": "123",
-      "characteristics": "123",
-      "updatedAt": "2026-07-05T14:45:14.831Z",
-      "images": [],
-      "id": "cat_1783262714831_kp3zt15qn",
-      "createdAt": "2026-07-05T14:45:14.831Z"
-    }
-  ],
+  "cats": [],
   "breedPages": {
     "devon": {
       "title": "Девон-рекс",
@@ -43,5 +25,5 @@
   "videos": [],
   "gallery": [],
   "settings": {},
-  "lastSync": "2026-07-05T14:49:16.546Z"
+  "lastSync": "2026-07-05T14:50:18.290Z"
 }
