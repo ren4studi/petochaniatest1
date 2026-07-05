@@ -1,5 +1,5 @@
 // GitHub Repository Sync — данные сайта в файле site-data.json в репозитории
-// Чтение: raw.githubusercontent.com (без токена)
+// Чтение: raw.githubusercontent.com (без токена) / GitHub API (с токеном)
 // Запись: GitHub Contents API (нужен classic token с правом repo)
 
 const PETOCHANIA_SITE_DATA_FILE = 'site-data.json';
@@ -8,11 +8,10 @@ class GitHubRepoSync {
     constructor() {
         this.owner = null;
         this.repo = null;
-        this.branch = 'master';
+        this.branch = 'main';
         this.dataFile = PETOCHANIA_SITE_DATA_FILE;
         this.githubToken = null;
         this.initialized = false;
-        this.fileSha = null;
         this._saveQueue = Promise.resolve();
         this.init();
     }
@@ -24,6 +23,55 @@ class GitHubRepoSync {
             'Authorization': `${scheme} ${token}`,
             'Accept': 'application/vnd.github.v3+json'
         };
+    }
+
+    getContentsApiUrl() {
+        return 'https://api.github.com/repos/' + this.owner + '/' + this.repo +
+            '/contents/' + encodeURIComponent(this.dataFile);
+    }
+
+    decodeGitHubFileContent(file) {
+        if (!file || !file.content) return null;
+        const binary = atob(file.content.replace(/\s/g, ''));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        const text = new TextDecoder('utf-8').decode(bytes);
+        return JSON.parse(text);
+    }
+
+    encodeGitHubFileContent(text) {
+        const bytes = new TextEncoder().encode(text);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    }
+
+    parseGitHubError(response, body) {
+        body = body || {};
+        const parts = [];
+        if (body.message) parts.push(body.message);
+        if (Array.isArray(body.errors)) {
+            body.errors.forEach(function(item) {
+                if (item && item.message) parts.push(item.message);
+            });
+        }
+        const message = parts.join(' ').trim() || ('HTTP ' + response.status);
+        const err = new Error(message);
+        err.status = response.status;
+        err.body = body;
+        return err;
+    }
+
+    isShaConflictError(error) {
+        if (!error) return false;
+        if (error.status === 409 || error.status === 422) return true;
+        const text = String(error.message || '').toLowerCase();
+        return text.includes('does not match') ||
+            (text.includes('sha') && text.includes('match'));
     }
 
     async init() {
@@ -46,12 +94,7 @@ class GitHubRepoSync {
         this.initialized = !!(this.owner && this.repo);
 
         if (this.initialized) {
-            console.log('✅ GitHub Repo Sync: ' + this.owner + '/' + this.repo + ' → ' + this.dataFile);
-            if (this.githubToken) {
-                console.log('✅ Токен найден — запись в репозиторий доступна');
-            } else {
-                console.log('ℹ️ Токен не задан — только чтение site-data.json');
-            }
+            console.log('✅ GitHub Repo Sync: ' + this.owner + '/' + this.repo + ' [' + this.branch + '] → ' + this.dataFile);
         } else {
             console.warn('⚠️ GitHub Repo Sync не настроен. Укажите owner/repo в админ-панели.');
         }
@@ -125,40 +168,36 @@ class GitHubRepoSync {
             if (response.ok) {
                 return await response.json();
             }
-            if (response.status !== 404) {
-                console.warn('site-data.json недоступен:', response.status);
-            }
         } catch (error) {
             console.warn('Ошибка загрузки site-data.json:', error);
         }
         return null;
     }
 
-    async getFileSha() {
-        const apiUrl = 'https://api.github.com/repos/' + this.owner + '/' + this.repo +
-            '/contents/' + encodeURIComponent(this.dataFile) + '?ref=' + encodeURIComponent(this.branch);
-
+    async loadFileFromGitHub() {
+        const apiUrl = this.getContentsApiUrl() + '?ref=' + encodeURIComponent(this.branch);
         const response = await fetch(apiUrl, {
             headers: GitHubRepoSync.getAuthHeaders(this.githubToken)
         });
 
-        if (response.ok) {
-            const fileData = await response.json();
-            this.fileSha = fileData.sha;
-            return fileData.sha;
+        if (response.status === 404) {
+            return { sha: null, data: null };
         }
-        if (response.status === 404) return null;
 
-        const error = await response.json().catch(function() { return {}; });
-        throw new Error(error.message || 'Ошибка чтения файла (HTTP ' + response.status + ')');
-    }
+        if (!response.ok) {
+            const body = await response.json().catch(function() { return {}; });
+            throw this.parseGitHubError(response, body);
+        }
 
-    isShaConflictError(message) {
-        if (!message) return false;
-        const text = String(message).toLowerCase();
-        return text.includes('does not match') ||
-            text.includes('sha') && text.includes('match') ||
-            text.includes('409');
+        const file = await response.json();
+        let data = null;
+        try {
+            data = this.decodeGitHubFileContent(file);
+        } catch (error) {
+            console.warn('Не удалось разобрать site-data.json:', error);
+        }
+
+        return { sha: file.sha || null, data: data };
     }
 
     mergeWithRemote(remote, local) {
@@ -175,10 +214,7 @@ class GitHubRepoSync {
     }
 
     async putSiteDataFile(payload, sha) {
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
-        const apiUrl = 'https://api.github.com/repos/' + this.owner + '/' + this.repo + '/contents/' +
-            encodeURIComponent(this.dataFile);
-
+        const content = this.encodeGitHubFileContent(JSON.stringify(payload, null, 2));
         const body = {
             message: 'Update site data from Petochania admin panel',
             content: content,
@@ -186,7 +222,7 @@ class GitHubRepoSync {
         };
         if (sha) body.sha = sha;
 
-        const response = await fetch(apiUrl, {
+        const response = await fetch(this.getContentsApiUrl(), {
             method: 'PUT',
             headers: Object.assign(
                 { 'Content-Type': 'application/json' },
@@ -196,38 +232,31 @@ class GitHubRepoSync {
         });
 
         if (!response.ok) {
-            const error = await response.json().catch(function() { return {}; });
-            const err = new Error(error.message || 'Ошибка сохранения в репозиторий (HTTP ' + response.status + ')');
-            err.status = response.status;
-            throw err;
+            const errorBody = await response.json().catch(function() { return {}; });
+            throw this.parseGitHubError(response, errorBody);
         }
 
-        const result = await response.json();
-        if (result.content && result.content.sha) {
-            this.fileSha = result.content.sha;
-        }
-        return result;
+        return response.json();
     }
 
     async saveDataOnce(data) {
-        const remote = await this.loadData();
-        const merged = this.mergeWithRemote(remote, data);
-        const payload = Object.assign({}, merged, { lastSync: new Date().toISOString() });
-
-        const maxAttempts = 3;
+        const maxAttempts = 5;
         let lastError = null;
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            const sha = await this.getFileSha();
+            const remoteState = await this.loadFileFromGitHub();
+            const merged = this.mergeWithRemote(remoteState.data, data);
+            const payload = Object.assign({}, merged, { lastSync: new Date().toISOString() });
+
             try {
-                await this.putSiteDataFile(payload, sha);
+                await this.putSiteDataFile(payload, remoteState.sha);
                 localStorage.setItem('petochania_last_sync', payload.lastSync);
                 return { success: true };
             } catch (error) {
                 lastError = error;
-                if (attempt < maxAttempts && (error.status === 409 || this.isShaConflictError(error.message))) {
-                    console.warn('Конфликт версии site-data.json, повтор ' + (attempt + 1) + '/' + maxAttempts);
-                    await new Promise(function(resolve) { setTimeout(resolve, 400 * attempt); });
+                if (attempt < maxAttempts && this.isShaConflictError(error)) {
+                    console.warn('Конфликт site-data.json, повтор ' + (attempt + 1) + '/' + maxAttempts);
+                    await new Promise(function(resolve) { setTimeout(resolve, 300 * attempt); });
                     continue;
                 }
                 throw error;
@@ -243,13 +272,11 @@ class GitHubRepoSync {
         }
 
         const self = this;
-        this._saveQueue = this._saveQueue.then(function() {
+        const task = function() {
             return self.saveDataOnce(data);
-        }).catch(function(error) {
-            console.error('Ошибка очереди сохранения:', error);
-            throw error;
-        });
+        };
 
+        this._saveQueue = this._saveQueue.then(task, task);
         return this._saveQueue;
     }
 
@@ -269,8 +296,7 @@ class GitHubRepoSync {
             throw new Error('Укажите GitHub username (owner) и имя репозитория');
         }
 
-        const testUrl = 'https://api.github.com/repos/' + owner + '/' + repo;
-        const testResponse = await fetch(testUrl, {
+        const testResponse = await fetch('https://api.github.com/repos/' + owner + '/' + repo, {
             headers: GitHubRepoSync.getAuthHeaders(token)
         });
 
@@ -279,17 +305,19 @@ class GitHubRepoSync {
             throw new Error(err.message || 'Репозиторий недоступен. Нужен classic token с правом repo');
         }
 
+        const repoInfo = await testResponse.json();
+        const resolvedBranch = branch || repoInfo.default_branch || 'main';
+
         this.owner = owner;
         this.repo = repo;
-        this.branch = branch;
+        this.branch = resolvedBranch;
         localStorage.setItem('petochania_github_owner', owner);
         localStorage.setItem('petochania_github_repo', repo);
-        localStorage.setItem('petochania_github_branch', branch);
+        localStorage.setItem('petochania_github_branch', resolvedBranch);
         this.initialized = true;
 
         await this.syncFromLocalStorage();
-
-        return { success: true, owner: owner, repo: repo, branch: branch };
+        return { success: true, owner: owner, repo: repo, branch: resolvedBranch };
     }
 }
 
